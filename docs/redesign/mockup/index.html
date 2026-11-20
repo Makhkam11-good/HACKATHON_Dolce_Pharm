@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dolce Pharm LMS — палитра и главная оператора</title>
+<style>
+  @font-face { font-family: Inter; font-weight: 400; src: url(fonts/inter-cyrillic-400-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+0492-04FF; }
+  @font-face { font-family: Inter; font-weight: 400; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2190-21FF,U+2212; }
+  @font-face { font-family: Inter; font-weight: 500; src: url(fonts/inter-cyrillic-500-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+0492-04FF; }
+  @font-face { font-family: Inter; font-weight: 500; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2190-21FF,U+2212; }
+  @font-face { font-family: Inter; font-weight: 600; src: url(fonts/inter-cyrillic-600-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+0492-04FF; }
+  @font-face { font-family: Inter; font-weight: 600; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2190-21FF,U+2212; }
+  @font-face { font-family: Inter; font-weight: 700; src: url(fonts/inter-cyrillic-700-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+0492-04FF; }
+  @font-face { font-family: Inter; font-weight: 700; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2190-21FF,U+2212; }
+  @font-face { font-family: Inter; font-weight: 800; src: url(fonts/inter-cyrillic-800-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+0492-04FF; }
+  @font-face { font-family: Inter; font-weight: 800; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+2000-206F,U+20AC,U+2122,U+2190-21FF,U+2212; }
+
+  :root {
+    --primary: #4F007D; --primary-700: #3E0063; --primary-50: #F3ECF8; --primary-100: #E8DDF0;
+    --accent: #6839CC; --coral: #E56D6D;
+    --ink: #201E1E; --text: #2B2730; --text-2: #5C5566; --border: #E5E5E5; --bg: #F6F4F8; --white: #fff;
+    --ok: #1B7D45; --ok-bg: #E8F5EE; --warn: #9A5B00; --warn-bg: #FFF4E0; --err: #C62828; --err-bg: #FDECEC; --neutral: #555555; --neutral-bg: #EFEFF1;
+    --r-btn: 18px; --r-card: 16px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--text); background: #fff; line-height: 1.5; }
+  .board { max-width: 1400px; margin: 0 auto; padding: 40px 40px 60px; }
+  h1 { font-size: 30px; color: var(--ink); margin: 0 0 4px; }
+  h2 { font-size: 22px; color: var(--ink); margin: 40px 0 16px; }
+  .lead { color: var(--text-2); font-size: 17px; margin: 0; }
+  .grid { display: grid; gap: 16px; }
+  .sw { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; font-size: 14px; }
+  .sw .chip { height: 76px; display: flex; align-items: flex-end; padding: 8px 12px; font-weight: 700; font-size: 18px; }
+  .sw .meta { padding: 10px 12px; }
+  .sw b { display: block; color: var(--ink); }
+  .sw small { color: var(--text-2); font-size: 13px; display: block; }
+  .row { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+  .type div { margin-bottom: 6px; color: var(--ink); }
+  .type span { color: var(--text-2); font-size: 13px; font-weight: 500; margin-left: 10px; }
+  .logo-box { border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--text-2); }
+  .note { background: var(--primary-50); border-radius: 14px; padding: 14px 18px; font-size: 15px; color: var(--text); max-width: 860px; }
+
+  /* ---------- телефон ---------- */
+  .phones { display: flex; gap: 40px; flex-wrap: wrap; }
+  .phone-cap { font-weight: 700; color: var(--ink); margin-bottom: 10px; font-size: 16px; }
+  .phone { width: 390px; height: 844px; border-radius: 44px; border: 10px solid #1d1b20; background: var(--bg); overflow: hidden; position: relative; display: flex; flex-direction: column; font-size: 18px; }
+  .status-bar { height: 44px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; }
+  .topbar { background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 14px; }
+  .topbar img { height: 40px; display: block; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 8px 14px; font-size: 16px; font-weight: 600; min-height: 44px; }
+  .pill.ok { background: rgba(255,255,255,.16); color: #fff; }
+  .pill.wait { background: var(--warn-bg); color: var(--warn); }
+  .content { flex: 1; overflow: hidden; padding: 18px 16px 0; }
+  .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--primary-50); color: var(--text); border-radius: 14px; padding: 12px 14px; font-size: 16px; margin-bottom: 14px; border: 1px solid var(--primary-100); }
+  .hello { font-size: 26px; font-weight: 700; color: var(--ink); margin: 0 0 2px; line-height: 1.25; }
+  .sub { color: var(--text-2); font-size: 17px; margin: 0 0 16px; }
+  .big { background: #fff; border-radius: 20px; padding: 18px; box-shadow: 0 1px 2px rgba(32,30,30,.06), 0 4px 16px rgba(79,0,125,.06); border: 1px solid var(--border); }
+  .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; color: var(--accent); text-transform: none; margin-bottom: 6px; }
+  .big h3 { font-size: 23px; line-height: 1.25; margin: 0 0 6px; color: var(--ink); }
+  .big .step { font-size: 17px; color: var(--text); margin-bottom: 12px; }
+  .bar { height: 12px; background: var(--primary-100); border-radius: 99px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--primary); border-radius: 99px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .bar-row .bar { flex: 1; }
+  .bar-row b { font-size: 17px; color: var(--ink); min-width: 44px; text-align: right; }
+  .saved { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); background: var(--ok-bg); border-radius: 999px; padding: 6px 12px; font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 60px; border-radius: var(--r-btn); font-size: 20px; font-weight: 700; border: 0; font-family: inherit; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.secondary { background: #fff; color: var(--primary); border: 2px solid var(--primary); min-height: 52px; font-size: 17px; }
+  .sec-title { font-size: 21px; font-weight: 700; color: var(--ink); margin: 22px 0 10px; }
+  .item { background: #fff; border-radius: 16px; border: 1px solid var(--border); padding: 14px; margin-bottom: 12px; }
+  .item-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .item h4 { font-size: 18px; margin: 0 0 8px; color: var(--ink); line-height: 1.3; font-weight: 600; }
+  .pct { font-size: 20px; font-weight: 700; color: var(--ink); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 12px; font-size: 15px; font-weight: 600; }
+  .b-ok { color: var(--ok); background: var(--ok-bg); }
+  .b-warn { color: var(--warn); background: var(--warn-bg); }
+  .b-err { color: var(--err); background: var(--err-bg); }
+  .b-neutral { color: var(--neutral); background: var(--neutral-bg); }
+  .hint { font-size: 15px; color: var(--text-2); margin-top: 8px; }
+  .nav { background: #fff; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px 34px; }
+  .nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 14px; font-weight: 600; color: var(--neutral); text-decoration: none; min-height: 60px; justify-content: center; border-radius: 14px; }
+  .nav a.on { color: var(--primary); background: var(--primary-50); }
+  svg { flex: none; }
+  .home-ind { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: #1d1b20; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+    <symbol id="i-award" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+    <symbol id="i-wifioff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2-1.52"/><path d="M2 8.82a15 15 0 0 1 4.18-2.64"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+    <symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3"><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="m8 17 4-4 4 4"/></symbol>
+  </defs>
+</svg>
+
+<div class="board">
+  <h1>Dolce Pharm LMS — фирменный стиль и главная оператора</h1>
+  <p class="lead">Шаг 1 редизайна: палитра, шрифт, логотип и макет главного экрана оператора. Остальные экраны — после согласования.</p>
+
+  <h2>Палитра</h2>
+  <div class="grid" style="grid-template-columns: repeat(6, 1fr)">
+    <div class="sw"><div class="chip" style="background:#4F007D;color:#fff">Aa</div><div class="meta"><b>Primary #4F007D</b><small>шапка, главные кнопки, прогресс</small><small>белый на нём 12.9:1 ✓</small></div></div>
+    <div class="sw"><div class="chip" style="background:#6839CC;color:#fff">Aa</div><div class="meta"><b>Accent #6839CC</b><small>ссылки, вторичные акценты</small><small>на белом 6.9:1 ✓</small></div></div>
+    <div class="sw"><div class="chip" style="background:#E56D6D;color:#fff"> </div><div class="meta"><b>Coral #E56D6D</b><small>только декор и крупные иконки</small><small>на белом 3.1:1 — не для текста</small></div></div>
+    <div class="sw"><div class="chip" style="background:#2B2730;color:#fff">Aa</div><div class="meta"><b>Текст #2B2730</b><small>заголовки #201E1E</small><small>на белом 14.6:1 ✓</small></div></div>
+    <div class="sw"><div class="chip" style="background:#5C5566;color:#fff">Aa</div><div class="meta"><b>Вторичный #5C5566</b><small>подписи (вместо #666 сайта)</small><small>на белом 7.1:1 ✓</small></div></div>
+    <div class="sw"><div class="chip" style="background:#F6F4F8;color:#2B2730;border-bottom:1px solid #E5E5E5">Aa</div><div class="meta"><b>Фон #F6F4F8</b><small>границы #E5E5E5</small><small>светло-фиолетовый #F3ECF8</small></div></div>
+  </div>
+  <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-top:16px">
+    <div class="sw"><div class="chip" style="background:#E8F5EE;color:#1B7D45">✓ Сдан</div><div class="meta"><b>Успех #1B7D45</b><small>5.2:1 ✓ (в брифе #1F8A4C — 4.4:1, чуть ниже AA)</small></div></div>
+    <div class="sw"><div class="chip" style="background:#FFF4E0;color:#9A5B00">◷ Срок прошёл</div><div class="meta"><b>Предупреждение #9A5B00</b><small>5.4:1 ✓ (в брифе #B26A00 — 4.2:1)</small></div></div>
+    <div class="sw"><div class="chip" style="background:#FDECEC;color:#C62828">! Не сдан</div><div class="meta"><b>Ошибка #C62828</b><small>5.6:1 ✓</small></div></div>
+    <div class="sw"><div class="chip" style="background:#EFEFF1;color:#555555">○ Не начат</div><div class="meta"><b>Нейтральный #555555</b><small>7.5:1 ✓</small></div></div>
+  </div>
+
+  <h2>Шрифт — Inter (локально, без Google Fonts)</h2>
+  <div class="row">
+    <div class="type">
+      <div style="font-size:28px;font-weight:700">Охрана труда в цехе <span>28 / 700 — заголовок экрана</span></div>
+      <div style="font-size:24px;font-weight:700">Продолжить обучение <span>24 / 700 — карточка</span></div>
+      <div style="font-size:20px;font-weight:700">Мои курсы <span>20 / 700 — раздел, кнопки</span></div>
+      <div style="font-size:18px;font-weight:400">Материал 2 из 4. Ответы сохранены на телефоне. <span>18 / 400 — основной текст, интервал 1.5</span></div>
+      <div style="font-size:18px;font-weight:400">Қазақша: Оқуды жалғастыру — әғқңөұүһі <span>казахские буквы</span></div>
+      <div style="font-size:15px;font-weight:600;color:#5C5566">Сдать до 17.11 <span>15 / 600 — подписи и статусы (минимум)</span></div>
+    </div>
+    <div class="note">
+      <b>Почему Inter.</b> Это основной шрифт сайта dolcepharm.kz (Outfit там только латиница). Inter хорошо читается на телефоне, в нём есть кириллица и все казахские буквы. Шрифт подключается из пакета <code>@fontsource/inter</code>, работает без интернета.<br><br>
+      <b>Форма.</b> Кнопки скруглены на 18&nbsp;px (на сайте 20&nbsp;px), карточки — на 16&nbsp;px, тени еле заметные, много воздуха. Главная кнопка — 60&nbsp;px высотой на всю ширину.
+    </div>
+  </div>
+
+  <h2>Логотип и иконки</h2>
+  <div class="row">
+    <div class="logo-box"><img src="assets/logo.png" style="height:56px" alt="Логотип Dolce Pharm"><span>На светлом фоне — оригинал из шапки сайта</span></div>
+    <div class="logo-box" style="background:#4F007D;color:#fff"><img src="assets/logo-on-dark.png" style="height:64px" alt=""><span style="color:#fff">На фиолетовой шапке — оригинал на белой плашке (логотип сам фиолетовый, поэтому не перекрашиваем)</span></div>
+    <div class="logo-box"><div style="display:flex;gap:16px;align-items:center"><img src="assets/icon-192.png" style="width:96px;border-radius:22px;border:1px solid #E5E5E5" alt=""><img src="assets/maskable-512.png" style="width:96px;border-radius:50%;border:1px solid #E5E5E5" alt=""></div><span>Иконка приложения на телефоне (птичка из логотипа) и maskable-вариант с отступами</span></div>
+  </div>
+  <div class="note" style="margin-top:16px">
+    <b>Почему primary — фиолетовый, а не синий.</b> На сайте доминирует фиолетовый: шапка и блоки (#4C047C), глобальный цвет темы Elementor <code>--e-global-color-primary: #4F007D</code>, сам логотип — я замерил по пикселям ≈ #48007A. Синяя «D» в иконке вкладки — стоковая картинка (файл <code>blue-d-letter-logo-png</code>), к логотипу не относится и похожа на знак сервиса Disqus, поэтому в приложении её не использую. Иконка приложения — птичка из логотипа.
+  </div>
+
+  <h2>Главная оператора — макет</h2>
+  <div class="phones">
+    <!-- ========== 1. есть интернет ========== -->
+    <div>
+      <div class="phone-cap">1. Обычный день: одно главное действие</div>
+      <div class="phone" id="phone-online">
+        <div class="status-bar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="topbar">
+          <img src="assets/logo-on-dark.png" alt="Dolce Pharm">
+          <span class="pill ok"><svg width="20" height="20"><use href="#i-check"/></svg>Всё отправлено</span>
+        </div>
+        <div class="content">
+          <p class="hello">Здравствуйте, Нурлан!</p>
+          <p class="sub">Осталось изучить 2 материала</p>
+          <div class="big">
+            <div class="eyebrow"><svg width="18" height="18"><use href="#i-book"/></svg>Продолжить обучение</div>
+            <h3>Охрана труда и техника безопасности</h3>
+            <div class="step">Материал 2 из 4 · Видео: средства защиты</div>
+            <div class="bar-row"><div class="bar"><i style="width:50%"></i></div><b>50%</b></div>
+            <div class="saved"><svg width="18" height="18"><use href="#i-phone"/></svg>Сохранено на телефоне</div>
+            <button class="btn primary"><svg width="22" height="22"><use href="#i-play"/></svg>Продолжить</button>
+          </div>
+          <div class="sec-title">Мои курсы</div>
+          <div class="item">
+            <div class="item-top"><h4>GMP: гигиена и переодевание в чистой зоне</h4><span class="pct">100%</span></div>
+            <div class="badges"><span class="badge b-ok"><svg width="16" height="16"><use href="#i-check"/></svg>Сдан</span></div>
+          </div>
+          <div class="item">
+            <div class="item-top"><h4>Действия при разливе химических веществ</h4><span class="pct">0%</span></div>
+            <div class="badges"><span class="badge b-neutral"><svg width="16" height="16"><use href="#i-dash"/></svg>Не начат</span><span class="badge b-warn"><svg width="16" height="16"><use href="#i-clock"/></svg>Сдать до 11.12</span></div>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="on"><svg width="26" height="26"><use href="#i-book"/></svg>Обучение</a>
+          <a><svg width="26" height="26"><use href="#i-award"/></svg>Результаты</a>
+          <a><svg width="26" height="26"><use href="#i-doc"/></svg>Документы</a>
+          <a><svg width="26" height="26"><use href="#i-menu"/></svg>Ещё</a>
+        </nav>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+
+    <!-- ========== 2. нет интернета ========== -->
+    <div>
+      <div class="phone-cap">2. В цеху нет интернета: спокойно, всё сохранено</div>
+      <div class="phone" id="phone-offline">
+        <div class="status-bar"><span>9:41</span><span>✈</span></div>
+        <div class="topbar">
+          <img src="assets/logo-on-dark.png" alt="Dolce Pharm">
+          <span class="pill wait"><svg width="20" height="20"><use href="#i-upload"/></svg>Ждёт отправки: 3</span>
+        </div>
+        <div class="content">
+          <div class="banner"><svg width="24" height="24" style="color:#4F007D;margin-top:1px"><use href="#i-wifioff"/></svg><div><b>Нет интернета — можно продолжать учиться.</b> Ответы сохранены на телефоне, отправим сами.</div></div>
+          <div class="big">
+            <div class="eyebrow"><svg width="18" height="18"><use href="#i-book"/></svg>Продолжить обучение</div>
+            <h3>Охрана труда и техника безопасности</h3>
+            <div class="step">Все материалы изучены · Осталось сдать тест</div>
+            <div class="bar-row"><div class="bar"><i style="width:100%"></i></div><b>100%</b></div>
+            <div class="saved"><svg width="18" height="18"><use href="#i-phone"/></svg>Сохранено на телефоне</div>
+            <button class="btn primary"><svg width="22" height="22"><use href="#i-play"/></svg>Перейти к тесту</button>
+          </div>
+          <div class="sec-title">Мои курсы</div>
+          <div class="item">
+            <div class="item-top"><h4>GMP: гигиена и переодевание</h4><span class="pct">60%</span></div>
+            <div class="badges"><span class="badge b-err"><svg width="16" height="16"><use href="#i-alert"/></svg>Не сдан — можно пересдать</span></div>
+          </div>
+          <div class="item">
+            <div class="item-top"><h4>Действия при разливе</h4><span class="pct">0%</span></div>
+            <div class="badges"><span class="badge b-neutral"><svg width="16" height="16"><use href="#i-dash"/></svg>Не сохранён на телефоне</span></div>
+            <div class="hint">Подключитесь к интернету, чтобы сохранить курс</div>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="on"><svg width="26" height="26"><use href="#i-book"/></svg>Обучение</a>
+          <a><svg width="26" height="26"><use href="#i-award"/></svg>Результаты</a>
+          <a><svg width="26" height="26"><use href="#i-doc"/></svg>Документы</a>
+          <a><svg width="26" height="26"><use href="#i-menu"/></svg>Ещё</a>
+        </nav>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+
+    <!-- ========== 3. курс ещё не сохранён ========== -->
+    <div>
+      <div class="phone-cap">3. Первый вход: сначала сохранить курс</div>
+      <div class="phone" id="phone-first">
+        <div class="status-bar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="topbar">
+          <img src="assets/logo-on-dark.png" alt="Dolce Pharm">
+          <span class="pill ok"><svg width="20" height="20"><use href="#i-check"/></svg>Всё отправлено</span>
+        </div>
+        <div class="content">
+          <p class="hello">Здравствуйте, Нурлан!</p>
+          <p class="sub">Вам назначено 3 курса</p>
+          <div class="big">
+            <div class="eyebrow"><svg width="18" height="18"><use href="#i-book"/></svg>Начать обучение</div>
+            <h3>Охрана труда и техника безопасности</h3>
+            <div class="step">4 материала и тест · Сдать до 04.12</div>
+            <button class="btn primary"><svg width="22" height="22"><use href="#i-down"/></svg>Сохранить на телефон</button>
+            <div class="hint" style="text-align:center">Чтобы учиться даже без интернета</div>
+          </div>
+          <div class="sec-title">Мои курсы</div>
+          <div class="item">
+            <div class="item-top"><h4>GMP: гигиена и переодевание в чистой зоне</h4><span class="pct">0%</span></div>
+            <div class="badges"><span class="badge b-neutral"><svg width="16" height="16"><use href="#i-dash"/></svg>Не начат</span></div>
+            <button class="btn secondary" style="margin-top:12px"><svg width="20" height="20"><use href="#i-down"/></svg>Сохранить на телефон</button>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="on"><svg width="26" height="26"><use href="#i-book"/></svg>Обучение</a>
+          <a><svg width="26" height="26"><use href="#i-award"/></svg>Результаты</a>
+          <a><svg width="26" height="26"><use href="#i-doc"/></svg>Документы</a>
+          <a><svg width="26" height="26"><use href="#i-menu"/></svg>Ещё</a>
+        </nav>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
