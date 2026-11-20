@@ -180,7 +180,7 @@ function CurrentCourse({ i }: { i: Info }) {
   }
 
   return (
-    <BigActionCard eyebrow={eyebrow} title={i.a.title} action={action}>
+    <BigActionCard eyebrow={eyebrow} title={i.a.title} action={action} onTitle={i.saved ? () => nav(`/course/${cid}`) : undefined}>
       <div className="text-lg text-slate-700 mb-3">{step}</div>
       {i.saved && !i.update && (
         <div className="flex items-center gap-3 mb-3">
@@ -210,6 +210,7 @@ function CourseRow({ i }: { i: Info }) {
           <span className="block text-lg font-semibold text-slate-900 leading-snug mb-2">{i.a.title}</span>
           <span className="flex flex-wrap gap-2">
             <StatusBadge status={statusKind(i)} />
+            {i.saved && !i.update && i.status !== 'passed' && <StatusBadge status="saved" />}
             {i.overdue ? <StatusBadge status="overdue" /> : i.a.due_date && i.status !== 'passed' && (
               <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.9rem] font-semibold bg-slate-100 text-slate-700"><Icon name="clock" size={16} />{t('Сдать до')} {fmtDate(i.a.due_date, false)}</span>
             )}

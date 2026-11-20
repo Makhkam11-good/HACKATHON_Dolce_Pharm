@@ -3,7 +3,7 @@
  *   cd frontend && npm i --no-save playwright-core && node e2e/redesign-shots.mjs before|after [https://localhost]
  * Результат: docs/redesign/<before|after>/<устройство>/<роль>-NN-<экран>.png
  * Серверных данных почти не меняет: курс сохраняется только в браузере, тест начинается, но не завершается.
- * Сотрудник — op03 (с историей обучения), не op01/op02 (у них «чистая история» для живого демо).
+ * Сотрудник — op16 (без истории: видно «Сохранить на телефон» и «Начать»), не op01/op02 (для живого демо).
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -68,7 +68,8 @@ async function session(browser, devName, user, { onboarding = false } = {}) {
 }
 
 const browser = await chromium.launch({ executablePath, headless: true });
-const op = await api('/api/auth/login', null, { login: 'op03', password: 'demo123' });
+const EMP = process.env.EMP || 'op16';
+const op = await api('/api/auth/login', null, { login: EMP, password: 'demo123' });
 const state = await api('/api/sync/state', op.access_token);
 const course = state.assignments.find((a) => a.title.startsWith('Охрана труда')) || state.assignments[0];
 const pkg = await api(`/api/courses/${course.course_id}/package`, op.access_token);
@@ -89,14 +90,18 @@ for (const devName of Object.keys(DEVICES).filter((d) => !ONLY.length || ONLY.in
   if (mobile) {
     const { ctx, page, shot } = await session(browser, devName, 'op04', { onboarding: true });
     await page.goto(`${BASE}/my`).catch(() => {});
-    const skip = page.getByRole('button', { name: /Далее/ });
-    for (let k = 1; k <= 3 && await skip.count(); k++) { await shot(`onboarding-${k}`); if (k < 3) await skip.click(); }
+    const dlg = page.getByRole('dialog', { name: /Знакомство/ });
+    await dlg.waitFor({ timeout: 15000 }).catch(() => {});
+    for (let k = 1; k <= 3 && await dlg.count(); k++) {
+      await shot(`onboarding-${k}`, { wait: 400 });
+      await dlg.getByRole('button', { name: k < 3 ? 'Далее' : 'Начать обучение' }).click();
+    }
     await ctx.close();
   }
 
   // сотрудник
   {
-    const { ctx, page, shot, go } = await session(browser, devName, 'op03');
+    const { ctx, page, shot, go } = await session(browser, devName, EMP);
     await go('/my', 'my-courses');
     // сохраняем курс на телефон (новая главная — кнопка в большой карточке или в строке курса)
     for (let k = 0; k < 3; k++) {

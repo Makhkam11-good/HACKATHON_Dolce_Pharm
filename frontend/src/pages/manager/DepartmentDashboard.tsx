@@ -92,7 +92,7 @@ export default function DepartmentDashboard() {
         <Card className="p-4 col-span-2 lg:col-span-1">
           <label className="flex items-center gap-2 text-slate-700 font-semibold flex-wrap">
             <Icon name="clock" size={20} />{t('Время обучения за')}
-            <select className="bg-white border-2 border-slate-300 rounded-lg px-2 min-h-[40px] font-semibold" value={days} onChange={(e) => setDays(Number(e.target.value))}>
+            <select className="bg-white border-2 border-slate-300 rounded-lg px-2 min-h-tap font-semibold" value={days} onChange={(e) => setDays(Number(e.target.value))}>
               <option value={7}>7 {t('дн.')}</option><option value={30}>30 {t('дн.')}</option><option value={365}>{t('год')}</option>
             </select>
           </label>

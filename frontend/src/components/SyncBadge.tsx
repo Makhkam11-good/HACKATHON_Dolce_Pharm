@@ -56,12 +56,12 @@ export function SyncBadge({ userId, onDark = false }: { userId: string; onDark?:
   return (
     <button
       onClick={() => (rejected ? nav('/results') : void syncNow())}
-      className={`inline-flex items-center gap-2 rounded-full px-4 min-h-tap font-semibold whitespace-nowrap ${cls}`}
+      className={`inline-flex items-center gap-2 rounded-full px-3 sm:px-4 min-h-tap font-semibold whitespace-nowrap max-w-full ${cls}`}
       title={pending && online ? t('Нажмите, чтобы отправить сейчас') : undefined}
       data-testid="sync-badge"
     >
       <Icon name={icon} size={20} className={info.phase === 'syncing' && online ? 'animate-spin' : ''} />
-      <span className="max-w-[46vw] truncate">{text}</span>
+      <span className="min-w-0 truncate">{text}</span>
     </button>
   );
 }

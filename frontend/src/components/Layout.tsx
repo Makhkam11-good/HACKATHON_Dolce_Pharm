@@ -98,13 +98,13 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className={`app-shell min-h-[100dvh] flex flex-col bg-slate-50 ${hideNav ? 'nav-hidden' : ''}`}>
       <header className="sticky top-0 z-30 bg-brand-600 text-white">
-        <div className="flex items-center gap-3 px-3 sm:px-5 h-16 pt-[env(safe-area-inset-top)] box-content">
-          <NavLink to="/" className="shrink-0 rounded-xl" aria-label="Dolce Pharm — на главную">
-            <img src="/brand/logo-on-dark.png" alt="Dolce Pharm" className="h-11 w-auto" />
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-16 pt-[env(safe-area-inset-top)] box-content">
+          <NavLink to="/" className="shrink-0 rounded-xl min-h-tap flex items-center" aria-label="Dolce Pharm — на главную">
+            <img src="/brand/logo-on-dark.png" alt="Dolce Pharm" className="h-9 min-[400px]:h-11 w-auto" />
           </NavLink>
           <span className="hidden lg:block text-white/90 font-semibold ml-1">{t('Обучение сотрудников')}</span>
           <div className="flex-1" />
-          <SyncBadge userId={user.id} onDark />
+          <div className="min-w-0 flex justify-end"><SyncBadge userId={user.id} onDark /></div>
           <div className="hidden md:flex items-center gap-2 ml-2">
             <span className="text-right leading-tight mr-1">
               <span className="block font-semibold">{user.full_name.split(' ').slice(0, 2).join(' ')}</span>

@@ -40,11 +40,13 @@ export function Card({ children, className = '', onClick }: { children: ReactNod
 }
 
 /** Большая карточка с одним главным действием (главная оператора). */
-export function BigActionCard({ eyebrow, eyebrowIcon = 'bookOpen', title, children, action }: { eyebrow: ReactNode; eyebrowIcon?: IconName; title: ReactNode; children?: ReactNode; action: ReactNode }) {
+export function BigActionCard({ eyebrow, eyebrowIcon = 'bookOpen', title, children, action, onTitle }: { eyebrow: ReactNode; eyebrowIcon?: IconName; title: ReactNode; children?: ReactNode; action: ReactNode; onTitle?: () => void }) {
   return (
     <section className="bg-white rounded-[20px] border border-slate-200 shadow-lift p-5" data-testid="big-action">
       <div className="flex items-center gap-2 text-accent-700 font-bold mb-1"><Icon name={eyebrowIcon} size={20} />{eyebrow}</div>
-      <h2 className="text-2xl font-bold mb-2">{title}</h2>
+      <h2 className="text-2xl font-bold mb-2">
+        {onTitle ? <button type="button" className="text-left hover:underline decoration-2 underline-offset-4" onClick={onTitle}>{title}</button> : title}
+      </h2>
       {children}
       <div className="mt-4">{action}</div>
     </section>
@@ -52,8 +54,8 @@ export function BigActionCard({ eyebrow, eyebrowIcon = 'bookOpen', title, childr
 }
 
 /** Строка списка: иконка слева, заголовок, подпись, справа значение или стрелка. Вся строка — зона нажатия. */
-export function ListItem({ icon, iconTone = 'brand', title, sub, right, onClick, children }: {
-  icon?: IconName | 'circleDashed'; iconTone?: 'brand' | 'ok' | 'neutral'; title: ReactNode; sub?: ReactNode; right?: ReactNode; onClick?: () => void; children?: ReactNode;
+export function ListItem({ icon, iconTone = 'brand', title, sub, right, onClick, children, testId }: {
+  icon?: IconName | 'circleDashed'; iconTone?: 'brand' | 'ok' | 'neutral'; title: ReactNode; sub?: ReactNode; right?: ReactNode; onClick?: () => void; children?: ReactNode; testId?: string;
 }) {
   const tone = { brand: 'bg-brand-50 text-brand-700', ok: 'bg-emerald-100 text-emerald-700', neutral: 'bg-slate-100 text-slate-600' }[iconTone];
   const body = (
@@ -68,7 +70,9 @@ export function ListItem({ icon, iconTone = 'brand', title, sub, right, onClick,
     </>
   );
   const cls = 'w-full text-left flex items-center gap-3 bg-white rounded-2xl border border-slate-200 p-4 min-h-[72px]';
-  return onClick ? <button type="button" className={`${cls} hover:border-brand-300 active:bg-brand-50`} onClick={onClick}>{body}</button> : <div className={cls}>{body}</div>;
+  return onClick
+    ? <button type="button" data-testid={testId} className={`${cls} hover:border-brand-300 active:bg-brand-50`} onClick={onClick}>{body}</button>
+    : <div data-testid={testId} className={cls}>{body}</div>;
 }
 
 // ---------------------------------------------------------------- заголовки, загрузка, пустые состояния

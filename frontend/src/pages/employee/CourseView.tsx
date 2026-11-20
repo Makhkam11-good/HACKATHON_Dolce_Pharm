@@ -100,7 +100,7 @@ export default function CourseView() {
             : rest > 0 ? `${t(MAT_KIND[mat.type])} · ${t('Изучать не меньше {{t}}', { t: fmtHuman(mat.min_seconds) })}`
             : `${t(MAT_KIND[mat.type])} · ${t('Откройте материал')}`;
           return (
-            <ListItem key={mat.id} icon={done ? 'check' : MAT_ICON[mat.type]} iconTone={done ? 'ok' : 'brand'}
+            <ListItem key={mat.id} testId="material" icon={done ? 'check' : MAT_ICON[mat.type]} iconTone={done ? 'ok' : 'brand'}
               title={`${i + 1}. ${mat.title}`} sub={sub} onClick={() => nav(`/course/${pkg.course.id}/m/${mat.id}`)} />
           );
         })}

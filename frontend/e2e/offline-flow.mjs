@@ -37,6 +37,8 @@ const browser = await chromium.launch({
   args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--ignore-certificate-errors'],
 });
 const phone = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 412, height: 880 }, isMobile: true, hasTouch: true, locale: 'ru-RU' });
+// окно знакомства при первом входе в автотесте не нужно
+await phone.addInitScript(() => { try { localStorage.setItem('onboarding:skip', '1'); } catch { /* */ } });
 const page = await phone.newPage();
 page.on('dialog', (d) => d.accept());
 page.on('pageerror', (e) => console.log('  pageerror:', e.message));
@@ -57,17 +59,19 @@ await page.fill('input:not([type="password"])', OP);
 await page.fill('input[type="password"]', 'demo123');
 await page.click('button[type="submit"]');
 await page.waitForURL('**/my');
-await page.getByRole('heading', { name: 'Мои курсы' }).waitFor();
+await page.getByRole('heading', { name: /Здравствуйте/ }).waitFor();
 ok(`вход ${OP}`);
 await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 30000 }).catch(async () => {
   await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 30000 });
 });
 ok('service worker управляет страницей');
-const card = page.locator('h2', { hasText: COURSE }).locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-await card.getByRole('button', { name: 'Скачать офлайн' }).click();
-await card.getByText('Доступен офлайн').waitFor({ timeout: 60000 });
-ok('курс скачан офлайн');
+// курс — в большой карточке «Начать обучение» или в списке «Другие курсы»
+const card = page.locator('[data-testid="big-action"], [data-course]').filter({ hasText: COURSE }).first();
+await card.getByRole('button', { name: /Сохранить на телефон/ }).click();
+await page.waitForTimeout(500);
+await page.waitForFunction(() => !document.body.innerText.includes('Сохраняем на телефон'), null, { timeout: 60000 });
+ok('курс сохранён на телефон');
 
 const leak = await page.evaluate(() => new Promise((res) => {
   const req = indexedDB.open('dolcepharm-lms');
@@ -82,13 +86,13 @@ ok('в IndexedDB нет правильных ответов в открытом 
 // ---------------------------------------------------------------- авиарежим
 await phone.setOffline(true);
 await page.reload();
-await page.getByRole('heading', { name: 'Мои курсы' }).waitFor({ timeout: 15000 });
-await page.getByText('Нет сети — вы можете продолжать обучение').waitFor();
-ok('оболочка открывается в авиарежиме, баннер «Нет сети»');
+await page.getByRole('heading', { name: /Здравствуйте/ }).waitFor({ timeout: 15000 });
+await page.getByText('Нет интернета — можно продолжать учиться.').waitFor();
+ok('оболочка открывается в авиарежиме, спокойная плашка «Нет интернета»');
 
-await page.locator('h2', { hasText: COURSE }).click();
+await page.locator('[data-testid="big-action"] h2 button, [data-course] > button').filter({ hasText: COURSE }).first().click();
 await page.getByRole('heading', { name: COURSE }).waitFor();
-const mats = page.locator('a[href*="/m/"]');
+const mats = page.locator('[data-testid="material"]');
 const matCount = await mats.count();
 await mats.first().click();
 const t0 = Date.now();
@@ -109,29 +113,34 @@ await page.locator('.md').waitFor();
 await stay(17);
 const txtSec = (Date.now() - t1) / 1000;
 ok(`изучено ${matCount} материала офлайн (${pptSec.toFixed(0)} с + ${txtSec.toFixed(0)} с)`);
-await page.getByRole('button', { name: /К тесту/ }).click();
-await page.getByRole('button', { name: 'Пройти тест' }).click();
+// с последнего материала: «Перейти к тесту» (если всё изучено) или «К курсу»
+await page.locator('.bottom-bar button').last().click();
+const toTest = page.getByRole('button', { name: 'Перейти к тесту' });
+if (await toTest.first().isVisible().catch(() => false)) await toTest.first().click();
 await page.getByRole('button', { name: 'Начать тест' }).click();
 for (let i = 0; i < 20; i++) {
   await page.getByText(new RegExp(`^Вопрос ${i + 1} из \\d+$`)).waitFor();
   await sleep(200);
-  const hint = await page.locator('.text-sm.text-slate-500.mb-4').innerText();
-  if (hint.includes('один')) await page.getByRole('radio').first().click();
-  else if (hint.includes('все верные')) await page.getByRole('checkbox').first().click();
-  else if (hint.includes('своими словами')) await page.locator('textarea').fill('Промыть водой 15 минут и обратиться к врачу');
-  else await page.getByRole('button', { name: 'Ниже' }).first().click(); // порядок — стрелкой
-  const finish = page.getByRole('button', { name: 'Завершить' });
+  const qtype = await page.locator('[data-qtype]').getAttribute('data-qtype');
+  if (qtype === 'single') await page.getByRole('radio').first().click();
+  else if (qtype === 'multi') await page.getByRole('checkbox').first().click();
+  else if (qtype === 'open') await page.locator('textarea').fill('Промыть водой 15 минут и обратиться к врачу');
+  else await page.getByRole('button', { name: 'Ниже' }).first().click(); // порядок — кнопкой «Ниже»
+  const finish = page.getByRole('button', { name: 'Завершить тест' });
   if (await finish.isVisible()) {
     await finish.click();
+    // подтверждение: «Изменить ответы будет нельзя»
+    await page.getByText('Изменить ответы будет нельзя.').waitFor();
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click();
     break;
   }
   await page.getByRole('button', { name: /Далее/ }).click();
 }
-await page.getByText('Предварительный результат. Итог подтвердится при синхронизации.').waitFor();
-const clientScore = await page.locator('.text-6xl').innerText();
+await page.getByText('Сохранено на телефоне, отправим сами').waitFor();
+const clientScore = await page.locator('[data-testid="score"]').innerText();
 ok(`тест пройден офлайн, предварительно ${clientScore}`);
-await page.getByText(/Офлайн · \d+ не отправлено/).waitFor();
-ok('бейдж: «Офлайн · N не отправлено»');
+await page.getByText(/Ждёт отправки: \d+/).first().waitFor();
+ok('в шапке: «Ждёт отправки: N»');
 
 // ---------------------------------------------------------------- сеть появилась
 const tOn = Date.now();
@@ -140,7 +149,7 @@ await page.getByText(/Всё отправлено/).waitFor({ timeout: 60000 });
 const lag = (Date.now() - tOn) / 1000;
 if (lag > 20) fail(`синхронизация заняла ${lag} с (> 20 с)`);
 ok(`сеть появилась → всё отправлено за ${lag.toFixed(1)} с`);
-await page.getByText('Подтверждено сервером').waitFor({ timeout: 15000 });
+await page.getByText(/Результат получен/).waitFor({ timeout: 15000 });
 ok('результат подтверждён серверной оценкой');
 
 const total = (await courseTime()) - baseline;
@@ -154,7 +163,7 @@ await page.goto(`${BASE}/course/${courseId}`);
 await mats.first().click();
 await stay(8);
 await page.goto(`${BASE}/qr-transfer`);
-await page.getByRole('button', { name: 'Показать QR-коды' }).click();
+await page.getByRole('button', { name: 'Показать коды мастеру' }).click();
 await page.getByText(/^Код 1 из \d+$/).waitFor();
 const total_n = Number((await page.getByText(/^Код 1 из \d+$/).innerText()).match(/из (\d+)/)[1]);
 await page.getByRole('button', { name: 'Пауза' }).click();
@@ -162,7 +171,7 @@ await page.addScriptTag({ path: require.resolve('jsqr/dist/jsQR.js') });
 const chunks = new Set();
 for (let i = 0; i < total_n * 2 && chunks.size < total_n; i++) {
   const txt = await page.evaluate(async () => {
-    const img = document.querySelector('img[alt^="QR"]');
+    const img = document.querySelector('img[alt^="Код"]');
     const c = document.createElement('canvas');
     c.width = img.naturalWidth;
     c.height = img.naturalHeight;
@@ -181,7 +190,9 @@ ok(`телефон показал ${total_n} QR-кодов, все распоз�
 const laptop = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 900 }, locale: 'ru-RU' });
 const mp = await laptop.newPage();
 await mp.goto(`${BASE}/login`);
-await mp.getByRole('button', { name: /manager1/ }).click();
+await mp.fill('input:not([type="password"])', 'manager1');
+await mp.fill('input[type="password"]', 'demo123');
+await mp.click('button[type="submit"]');
 await mp.waitForURL('**/dash');
 await mp.goto(`${BASE}/qr-receive`);
 const feed = async (list) => {
@@ -189,14 +200,14 @@ const feed = async (list) => {
   await mp.getByRole('button', { name: 'Добавить' }).click();
 };
 await feed([...chunks].reverse());
-await mp.getByText(/^Принято: \d+ событий/).waitFor({ timeout: 20000 });
-ok(`мастер принял пакет: ${await mp.getByText(/^Принято: \d+ событий/).innerText()}`);
+await mp.getByText(/^Принято: /).waitFor({ timeout: 20000 });
+ok(`мастер принял пакет: ${await mp.getByText(/^Принято: /).innerText()}`);
 await mp.getByRole('button', { name: 'Демо: отправить изменённый пакет' }).click();
-await mp.getByText('Подпись не совпала — пакет изменён или подделан. Данные не приняты.').waitFor();
+await mp.getByText(/Подпись не совпала/).waitFor();
 ok('изменённый пакет отклонён: «Подпись не совпала»');
 await mp.getByRole('button', { name: 'Новый приём' }).click();
 await feed(chunks);
-await mp.getByText(/Пакет уже был принят ранее/).waitFor();
+await mp.getByText(/уже были приняты раньше/).waitFor();
 ok('повторное сканирование того же пакета: «уже был принят», без дублей');
 
 await page.getByRole('button', { name: 'Готово, мастер принял' }).click();

@@ -123,6 +123,7 @@ async function phone(devName, descriptor, user, safeBottom) {
   console.log(`\n=== ${devName} (${user}) ===`);
   const browser = await chromium.launch({ executablePath, headless: true });
   const ctx = await browser.newContext({ ...descriptor, deviceScaleFactor: 2, ignoreHTTPSErrors: true, permissions: ['clipboard-read', 'clipboard-write'] });
+  await ctx.addInitScript(() => { try { localStorage.setItem('onboarding:skip', '1'); } catch { /* */ } });
   if (safeBottom) {
     await ctx.addInitScript((px) => {
       const add = () => {
@@ -141,12 +142,13 @@ async function phone(devName, descriptor, user, safeBottom) {
   // --- онлайн-экраны
   await page.goto(`${BASE}/my`);
   await page.waitForTimeout(1500);
-  await clickable(page, page.getByRole('button', { name: /Скачать офлайн/ }), 'Мои курсы → «Скачать офлайн»');
+  await clickable(page, page.getByRole('button', { name: /Сохранить на телефон/ }), 'Главная → «Сохранить на телефон»');
   await contentClearsNav(page, 'Мои курсы');
   await shot(page, devName, n++, 'my-courses');
-  const card = page.locator('a, div').filter({ hasText: 'Охрана труда и техника' }).filter({ has: page.getByRole('button', { name: /Скачать офлайн/ }) }).last();
-  await card.getByRole('button', { name: /Скачать офлайн/ }).click();
-  await page.getByText('Доступен офлайн').first().waitFor({ timeout: 180000 });
+  const card = page.locator('[data-testid="big-action"], [data-course]').filter({ hasText: 'Охрана труда и техника' }).first();
+  await card.getByRole('button', { name: /Сохранить на телефон/ }).click();
+  await page.waitForTimeout(500);
+  await page.waitForFunction(() => !document.body.innerText.includes('Сохраняем на телефон'), null, { timeout: 180000 });
 
   for (const [path, name, btn] of [
     ['/library', 'library', null],
@@ -168,7 +170,7 @@ async function phone(devName, descriptor, user, safeBottom) {
   }
   await page.getByRole('button', { name: 'Ещё' }).click();
   await page.waitForTimeout(500);
-  await clickable(page, page.getByRole('button', { name: /Передать мастеру без сети/ }), '«Ещё» → главная кнопка «Передать мастеру без сети»');
+  await clickable(page, page.getByRole('button', { name: /Передать результаты мастеру/ }), '«Ещё» → главная кнопка «Передать результаты мастеру»');
   await shot(page, devName, n++, 'more-menu');
   await page.keyboard.press('Escape');
 
@@ -176,7 +178,7 @@ async function phone(devName, descriptor, user, safeBottom) {
   await ctx.setOffline(true);
   await page.goto(`${BASE}/my`).catch(() => {});
   await page.waitForTimeout(1200);
-  await page.getByText('Охрана труда и техника', { exact: false }).first().click();
+  await page.locator('[data-testid="big-action"] h2 button, [data-course] > button').filter({ hasText: 'Охрана труда и техника' }).first().click();
   await page.waitForTimeout(1200);
   const courseUrl = page.url();
   await contentClearsNav(page, 'Курс');
@@ -187,7 +189,7 @@ async function phone(devName, descriptor, user, safeBottom) {
     const [kind, sec] = mats[i];
     await page.goto(courseUrl);
     await page.waitForTimeout(800);
-    await page.locator('a[href*="/m/"]').nth(i).click({ timeout: 15000 }).catch(async (e) => {
+    await page.locator('[data-testid="material"]').nth(i).click({ timeout: 15000 }).catch(async (e) => {
       console.log('URL:', page.url(), '| TEXT:', (await page.innerText('body').catch(() => '?')).replace(/\s+/g, ' ').slice(0, 400));
       throw e;
     });
@@ -214,7 +216,7 @@ async function phone(devName, descriptor, user, safeBottom) {
 
   await page.goto(courseUrl);
   await page.waitForTimeout(1200);
-  const testBtn = page.getByRole('button', { name: /Пройти тест/ });
+  const testBtn = page.getByRole('button', { name: /Перейти к тесту/ }).first();
   ok(!(await testBtn.isDisabled()), 'Курс: тест открыт после изучения материалов');
   await testBtn.click();
   await page.waitForTimeout(800);
@@ -246,9 +248,9 @@ async function phone(devName, descriptor, user, safeBottom) {
   await page.goto(`${BASE}/qr-transfer`).catch(() => {});
   await page.waitForTimeout(1200);
   ok((await page.getByText('Сканировать подтверждение мастера').count()) === 0, 'QR: «Сканировать подтверждение» скрыто до показа кодов');
-  await clickable(page, page.getByRole('button', { name: /Показать QR-коды/ }), 'QR: «Показать QR-коды»');
-  await page.getByRole('button', { name: /Показать QR-коды/ }).click();
-  await page.waitForSelector('img[alt^="QR "]', { timeout: 20000 });
+  await clickable(page, page.getByRole('button', { name: /Показать коды мастеру/ }), 'Передача: «Показать коды мастеру»');
+  await page.getByRole('button', { name: /Показать коды мастеру/ }).click();
+  await page.waitForSelector('img[alt^="Код "]', { timeout: 20000 });
   await page.waitForTimeout(500);
   await clickable(page, page.getByRole('button', { name: /Пауза|Продолжить/ }), 'QR: «Пауза»');
   await clickable(page, page.getByRole('button', { name: /Готово, мастер принял/ }), 'QR: «Готово, мастер принял»');
@@ -260,7 +262,7 @@ async function phone(devName, descriptor, user, safeBottom) {
   const total = Number((await page.getByText(/Код \d+ из \d+/).innerText()).match(/из (\d+)/)[1]);
   const images = [];
   for (let k = 0; k < total; k++) {
-    const src = await page.locator('img[alt^="QR "]').getAttribute('src');
+    const src = await page.locator('img[alt^="Код "]').getAttribute('src');
     const file = join(TMP, `${devName}-qr-${k + 1}.png`);
     writeFileSync(file, Buffer.from(src.split(',')[1], 'base64'));
     images.push(file);
@@ -283,8 +285,8 @@ async function desktop(qr) {
   const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
   await login(page, 'methodist');
-  await clickable(page, page.locator('aside a', { hasText: 'Принять по QR' }), 'Меню методиста: «Принять по QR» виден без прокрутки');
-  await page.locator('aside a', { hasText: 'Принять по QR' }).click();
+  await clickable(page, page.locator('aside a', { hasText: 'Принять результаты сотрудников' }), 'Меню методиста: «Принять результаты сотрудников» виден без прокрутки');
+  await page.locator('aside a', { hasText: 'Принять результаты сотрудников' }).click();
   await page.waitForTimeout(1200);
   ok(await page.evaluate(() => !document.querySelector('video')?.srcObject), 'Камера не включается сама при открытии страницы');
   await page.getByRole('button', { name: 'Включить камеру' }).click();
@@ -293,7 +295,7 @@ async function desktop(qr) {
   await page.screenshot({ path: join(SHOTS, 'desktop-01-qr-receive-camera.png') });
 
   await page.locator('input[type="file"]').setInputFiles(qr.images);
-  await page.getByText(/Принято:|Пакет уже был принят/).waitFor({ timeout: 30000 });
+  await page.getByText(/Принято:|уже были приняты раньше/).waitFor({ timeout: 30000 });
   ok(await page.getByText(new RegExp(`Распознано кодов на фото: ${qr.total} из ${qr.total}`)).count() > 0, `Фото кодов: распознано ${qr.total} из ${qr.total}`);
   ok(await page.getByText(/^Принято:/).count() > 0, 'Пакет с фото принят сервером');
   await page.screenshot({ path: join(SHOTS, 'desktop-02-qr-received.png') });
@@ -301,8 +303,8 @@ async function desktop(qr) {
   await page.getByRole('button', { name: /Новый приём/ }).click();
   await page.fill('#qr-manual', qr.text);
   await page.getByRole('button', { name: 'Добавить' }).click();
-  await page.getByText(/Пакет уже был принят ранее/).waitFor({ timeout: 20000 });
-  ok(true, 'Повтор того же пакета (ручной ввод) → «Пакет уже был принят ранее»');
+  await page.getByText(/уже были приняты раньше/).waitFor({ timeout: 20000 });
+  ok(true, 'Повтор тех же кодов (ручной ввод) → «Эти результаты уже были приняты раньше»');
 
   await page.getByRole('button', { name: /Демо: отправить изменённый пакет/ }).click();
   await page.getByText(/Подпись не совпала/).waitFor({ timeout: 20000 });

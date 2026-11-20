@@ -92,7 +92,7 @@ export default function MaterialView() {
           </Banner>
           <div className="break-all text-slate-700">{mat.url}</div>
           <a href={mat.url} target="_blank" rel="noreferrer noopener" onClick={() => online && courseId && markMaterialOpened(courseId, mat.id)}
-            className={online ? '' : 'pointer-events-none'} aria-disabled={!online}>
+            className={`inline-flex w-full sm:w-auto ${online ? '' : 'pointer-events-none'}`} aria-disabled={!online}>
             <Button icon="link" disabled={!online} className="w-full sm:w-auto">{t('Открыть сайт')}</Button>
           </a>
         </div>
