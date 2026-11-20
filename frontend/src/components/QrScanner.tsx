@@ -19,7 +19,36 @@ export function cameraErrorText(e: unknown, t: TFn): string {
   if (name === 'NotReadableError' || name === 'TrackStartError' || name === 'AbortError') {
     return t('Камера занята другим приложением (Zoom, Teams, OBS)');
   }
+  if (name === 'CameraTimeout') {
+    return t('Камера не отвечает: Windows не отдаёт видео браузеру, поэтому окно «Разрешить» не появляется. Закройте программы, которые используют камеру (NVIDIA Broadcast, iVCam, OBS, Discord, Zoom), и перезапустите браузер. Если не помогло — перезагрузите компьютер. Пока можно принять коды через «Загрузить фото/скриншот QR».');
+  }
   return `${t('Не удалось включить камеру')}: ${(e as Error)?.message || String(e)}`;
+}
+
+/** Если браузер или Windows зависли на опросе камер, getUserMedia не завершается никогда — ждём не дольше этого. */
+const CAMERA_TIMEOUT_MS = 12000;
+
+/** getUserMedia с таймаутом. Поток, пришедший после таймаута, сразу закрываем, чтобы камера не осталась включённой. */
+function getUserMediaWithTimeout(constraints: MediaStreamConstraints): Promise<MediaStream> {
+  let timedOut = false;
+  const gum = navigator.mediaDevices.getUserMedia(constraints);
+  gum.then((s) => timedOut && s.getTracks().forEach((tr) => tr.stop())).catch(() => undefined);
+  return Promise.race([
+    gum,
+    new Promise<never>((_, reject) => setTimeout(() => {
+      timedOut = true;
+      reject(Object.assign(new Error('camera timeout'), { name: 'CameraTimeout' }));
+    }, CAMERA_TIMEOUT_MS)),
+  ]);
+}
+
+/** Разрешение уже заблокировано для сайта? Тогда браузер не покажет окно повторно — объясняем сразу. */
+async function cameraBlocked(): Promise<boolean> {
+  try {
+    return (await navigator.permissions?.query({ name: 'camera' as PermissionName }))?.state === 'denied';
+  } catch {
+    return false; // Safari/Firefox могут не знать имя 'camera'
+  }
 }
 
 /**
@@ -58,6 +87,10 @@ export function QrScanner({ onResult, active = true, autoStart = false, preferBa
       return;
     }
     stop();
+    if (await cameraBlocked()) {
+      setErr(cameraErrorText({ name: 'NotAllowedError' }, t));
+      return;
+    }
     setState('starting');
     try {
       const constraints: MediaStreamConstraints = {
@@ -68,7 +101,7 @@ export function QrScanner({ onResult, active = true, autoStart = false, preferBa
           height: { ideal: 720 },
         },
       };
-      const s = await navigator.mediaDevices.getUserMedia(constraints);
+      const s = await getUserMediaWithTimeout(constraints);
       stream.current = s;
       const v = video.current!;
       v.srcObject = s;
