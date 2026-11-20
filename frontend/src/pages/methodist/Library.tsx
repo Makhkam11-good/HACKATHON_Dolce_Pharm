@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api, errorText } from '../../api/client';
 import { Alert, Badge, Button, Card, Empty, Field, inputCls, Modal, PageTitle, Spinner } from '../../components/ui';
 import type { Category, LibraryItem } from '../../types';
-import { uploadFile } from './CourseEditor';
+import { LargeUploadHint, uploadFile } from './CourseEditor';
 
 export default function MLibrary() {
   const { t } = useTranslation();
@@ -115,6 +115,7 @@ function EditItem({ item, cats, onClose, onDone }: { item: Partial<LibraryItem>;
       <label className="flex items-center gap-2 min-h-tap mb-3"><input type="checkbox" className="w-6 h-6" checked={f.allow_offline} onChange={(e) => setF({ ...f, allow_offline: e.target.checked })} />{t('Разрешить сохранять офлайн')}</label>
       <input ref={input} type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.mp4,.mov,.webm" />
       <Button variant="secondary" icon="upload" onClick={() => input.current?.click()} className="mb-3 w-full">{file ? file.name : item.file ? `${t('Заменить файл')} (${item.file.original_name})` : t('Выбрать файл')}</Button>
+      <LargeUploadHint file={file} />
       {err && <div className="mb-3"><Alert kind="error">{err}</Alert></div>}
       <div className="flex gap-2">
         <Button big disabled={busy || (!file && !f.file_id)} onClick={() => void submit()}>{busy ? t('Сохранение…') : t('Сохранить')}</Button>

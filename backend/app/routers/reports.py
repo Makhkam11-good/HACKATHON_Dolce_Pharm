@@ -1,11 +1,12 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import public_base_url
 from app.db import get_db
 from app.models import Certificate, Course, Department, User
 from app.security import STAFF, api_error, get_current_user, require_role
@@ -47,13 +48,13 @@ def report_export(name: str, format: str = "xlsx", f: Filters = Depends(filters)
 
 # ---------------------------------------------------------------- сертификаты
 @router.get("/certificates/{cert_id}/pdf")
-def cert_pdf(cert_id: uuid.UUID, me: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def cert_pdf(cert_id: uuid.UUID, request: Request, me: User = Depends(get_current_user), db: Session = Depends(get_db)):
     c = db.get(Certificate, cert_id)
     if not c:
         raise api_error(404, "not_found", "Сертификат не найден")
     if c.user_id != me.id and me.role not in (*STAFF, "manager"):
         raise api_error(403, "forbidden", "Нет доступа")
-    return file_response(certificate_pdf(db, c), f"certificate-{c.number}.pdf", "application/pdf")
+    return file_response(certificate_pdf(db, c, public_base_url(request)), f"certificate-{c.number}.pdf", "application/pdf")
 
 
 @router.get("/certificates/verify/{code}")

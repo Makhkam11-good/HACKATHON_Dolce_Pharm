@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorText } from '../../api/client';
+import i18n from '../../i18n';
 import { Icon } from '../../components/Icon';
 import { MarkdownBlock } from '../../components/MarkdownBlock';
 import { Alert, Badge, Button, Card, Field, fmtBytes, inputCls, Modal, PageTitle, Spinner } from '../../components/ui';
@@ -18,6 +19,29 @@ interface Course { id: string; title: string; description: string; category_id: 
 const TYPE_LABEL: Record<string, string> = { pdf: 'PDF', video: 'Видео', doc: 'Документ Word', xls: 'Таблица Excel', ppt: 'Презентация', link: 'Ссылка', text: 'Текст' };
 const ACCEPT = '.pdf,.mp4,.mov,.webm,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
 
+/** Cloudflare Tunnel пропускает запросы до ~100 МБ; с запасом предупреждаем начиная с 95 МБ. */
+const TUNNEL_UPLOAD_LIMIT = 95 * 1024 * 1024;
+
+/** Открыто ли приложение напрямую (localhost или адрес в локальной сети), а не через публичный туннель. */
+function isServerLocal(): boolean {
+  const h = window.location.hostname;
+  return h === 'localhost' || h === '::1' || h === '[::1]' || h.endsWith('.local') ||
+    /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+}
+
+/** Подсказка методисту: большой файл через туннель не пройдёт — загрузить с компьютера сервера. */
+export function LargeUploadHint({ file }: { file: File | null }) {
+  const { t } = useTranslation();
+  if (!file || file.size <= TUNNEL_UPLOAD_LIMIT || isServerLocal()) return null;
+  return (
+    <div className="mb-3">
+      <Alert kind="warn">
+        {t('Файл больше 95 МБ. Через публичный адрес можно загрузить не больше ~100 МБ — загрузка может не пройти. Откройте кабинет на компьютере сервера по адресу https://localhost и загрузите файл оттуда.')}
+      </Alert>
+    </div>
+  );
+}
+
 /** Загрузка с прогрессом (XHR), т.к. fetch не даёт прогресс отправки. */
 export function uploadFile(file: File, onProgress: (p: number) => void): Promise<FileInfo & { kind: string }> {
   return new Promise((resolve, reject) => {
@@ -26,6 +50,11 @@ export function uploadFile(file: File, onProgress: (p: number) => void): Promise
     xhr.setRequestHeader('Authorization', `Bearer ${authToken()}`);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress((100 * e.loaded) / e.total);
     xhr.onload = () => {
+      // 413 от Cloudflare приходит HTML-страницей — объясняем по-человечески
+      if (xhr.status === 413 && !isServerLocal()) {
+        reject(new Error(i18n.t('Файл слишком большой для загрузки через публичный адрес (лимит ~100 МБ). Загрузите его с компьютера сервера: https://localhost')));
+        return;
+      }
       try {
         const j = JSON.parse(xhr.responseText);
         if (xhr.status >= 300) reject(new Error(j.detail?.message || `Ошибка ${xhr.status}`));
@@ -249,6 +278,7 @@ function AddMaterial({ kind, courseId, onClose, onDone }: { kind: 'file' | 'link
           <div className="text-xs text-slate-500 mt-2">{t('Office-файлы автоматически конвертируются в PDF, видео — сжимается до 720p.')}</div>
         </div>
       )}
+      {kind === 'file' && <LargeUploadHint file={file} />}
       <Field label={t('Название')}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === 'file' ? file?.name : ''} /></Field>
       {kind === 'link' && <Field label="URL"><input className={inputCls} value={url} onChange={(e) => setUrl(e.target.value)} /></Field>}
       {kind === 'text' && (

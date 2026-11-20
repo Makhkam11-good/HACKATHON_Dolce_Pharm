@@ -24,6 +24,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-in-env-file}
       JWT_TTL_DAYS: ${JWT_TTL_DAYS:-7}
       PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
       SEED_DEMO: ${SEED_DEMO:-1}
     volumes:
       - storage:/app/storage
@@ -50,6 +51,15 @@ services:
       - ./nginx/certs:/etc/nginx/certs
     depends_on:
       - backend
+
+  # Публичный HTTPS-адрес *.trycloudflare.com без аккаунта и сертификатов на телефоне.
+  # Запуск: docker compose --profile tunnel up   (или scripts/tunnel.sh — напечатает адрес)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://nginx:80
+    depends_on: [nginx]
+    profiles: ["tunnel"]
 
 volumes:
   pgdata:

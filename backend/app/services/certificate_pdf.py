@@ -19,7 +19,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.config import public_base_url, settings
 from app.models import Certificate, Course, TestAttempt, User
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # без 0/O/1/I
@@ -74,7 +74,8 @@ def _qr(data: str, size: float) -> Drawing:
     return d
 
 
-def certificate_pdf(db: Session, cert: Certificate) -> bytes:
+def certificate_pdf(db: Session, cert: Certificate, base_url: str | None = None) -> bytes:
+    verify_url = f"{base_url or public_base_url()}/verify/{cert.verify_code}"
     regular, bold = fonts()
     user = db.get(User, cert.user_id)
     course = db.get(Course, cert.course_id)
@@ -114,9 +115,9 @@ def certificate_pdf(db: Session, cert: Certificate) -> bytes:
     c.drawString(26 * mm, 40 * mm, f"№ {cert.number}")
     c.setFont(regular, 10)
     c.drawString(26 * mm, 34 * mm, f"Код проверки: {cert.verify_code}")
-    c.drawString(26 * mm, 28 * mm, f"Проверить: https://{settings.PUBLIC_HOST}/verify/{cert.verify_code}")
+    c.drawString(26 * mm, 28 * mm, f"Проверить: {verify_url}")
     c.drawString(W / 2 - 10 * mm, 40 * mm, "Руководитель учебного центра  ____________________")
-    renderPDF.draw(_qr(f"https://{settings.PUBLIC_HOST}/verify/{cert.verify_code}", 32 * mm), c, W - 56 * mm, 22 * mm)
+    renderPDF.draw(_qr(verify_url, 32 * mm), c, W - 56 * mm, 22 * mm)
     c.setFillColor(colors.HexColor("#b42318"))
     c.setFont(regular, 9)
     c.drawCentredString(W / 2, 19 * mm, DEMO_NOTE)
