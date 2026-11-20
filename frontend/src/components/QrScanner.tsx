@@ -62,7 +62,11 @@ export function QrScanner({ onResult, active = true, autoStart = false, preferBa
     try {
       const constraints: MediaStreamConstraints = {
         audio: false,
-        video: deviceId ? { deviceId: { exact: deviceId } } : preferBack ? { facingMode: { ideal: 'environment' } } : true,
+        video: {
+          ...(deviceId ? { deviceId: { exact: deviceId } } : preferBack ? { facingMode: { ideal: 'environment' } } : {}),
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       };
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       stream.current = s;
@@ -85,7 +89,7 @@ export function QrScanner({ onResult, active = true, autoStart = false, preferBa
         const w = v.videoWidth;
         const h = v.videoHeight;
         if (!w || !h) return;
-        const scale = Math.min(1, 960 / Math.max(w, h));
+        const scale = Math.min(1, 1280 / Math.max(w, h));
         c.width = Math.round(w * scale);
         c.height = Math.round(h * scale);
         const ctx = c.getContext('2d', { willReadFrequently: true })!;

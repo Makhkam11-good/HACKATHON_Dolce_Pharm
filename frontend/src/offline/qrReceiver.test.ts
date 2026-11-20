@@ -57,7 +57,7 @@ describe('QrAssembler (приёмник на ПК мастера)', () => {
   it('новый пакет сбрасывает незавершённую сборку', () => {
     const a = new QrAssembler();
     a.add(toChunks('old', 'B'.repeat(2000))[0]);
-    const fresh = toChunks('new', 'C'.repeat(800));
+    const fresh = toChunks('new', 'C'.repeat(400)) // 2 чанка по 250;
     const r = a.add(fresh[0]);
     expect(r.status).toBe('added');
     expect(r.status === 'added' && r.droppedPrevious).toBe(true);
@@ -70,5 +70,18 @@ describe('QrAssembler (приёмник на ПК мастера)', () => {
     const a = new QrAssembler();
     const statuses = splitManual(`  ${chunks.join('\n')} \n\n`).map((c) => a.add(c).status);
     expect(statuses.at(-1)).toBe('complete');
+  });
+});
+
+import { cleanCode } from './qrReceiver';
+import { describe as d2, expect as e2, it as i2 } from 'vitest';
+d2('manual paste tolerance', () => {
+  const code = 'DPQR1|abcd1234|1|2|0000abcd|eNqtmt-tu_Gz';
+  i2('strips invisible chars, quotes and leading garbage', () => {
+    e2(cleanCode(`﻿  "${code}"​`)).toBe(code);
+    e2(cleanCode(`Код: ${code}`)).toBe(code);
+  });
+  i2('finds several codes separated by CRLF/spaces', () => {
+    e2(splitManual(` ${code}\r\n${code.replace('|1|', '|2|')} `)).toEqual([code, code.replace('|1|', '|2|')]);
   });
 });

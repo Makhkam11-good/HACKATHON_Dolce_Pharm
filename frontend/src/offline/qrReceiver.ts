@@ -34,7 +34,7 @@ export class QrAssembler {
   }
 
   add(text: string): AddResult {
-    const ch = parseChunk(text.trim());
+    const ch = parseChunk(cleanCode(text));
     if (!ch) return { status: 'ignored' };
     let newBatch = false;
     let droppedPrevious = false;
@@ -58,9 +58,18 @@ export class QrAssembler {
   }
 }
 
-/** Разбор вставленного текста: коды через пробел/перенос строки. */
+/** Убирает невидимые символы, кавычки и всё до префикса DPQR1| (iOS при копировании может добавить мусор). */
+export function cleanCode(text: string): string {
+  const s = text.replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '').trim();
+  const at = s.indexOf('DPQR1|');
+  return (at >= 0 ? s.slice(at) : s).replace(/["'«»“”]+$/g, '').trim();
+}
+
+/** Разбор вставленного текста: находит все коды DPQR1|… в любом месте, через пробелы, переносы строк, кавычки. */
 export function splitManual(text: string): string[] {
-  return text.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  const clean = text.replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '');
+  const found = clean.match(/DPQR1\|[A-Za-z0-9_\-.|]+/g);
+  return found ?? clean.split(/\s+/).map((s) => s.trim()).filter(Boolean);
 }
 
 /** Распознать QR на фото или скриншоте (запасной способ, если камера не работает). */

@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 
-/** Карусель QR-кодов: 800 мс на код, пауза/назад/вперёд, «Код 2 из 5». */
-export function QrCarousel({ chunks, interval = 800 }: { chunks: string[]; interval?: number }) {
+/** Карусель QR-кодов: 1 с на код (уровень коррекции L — крупнее модули, легче читать с веб-камеры), пауза/назад/вперёд, «Код 2 из 5». */
+export function QrCarousel({ chunks, interval = 1000 }: { chunks: string[]; interval?: number }) {
   const { t } = useTranslation();
   const [urls, setUrls] = useState<string[]>([]);
   const [i, setI] = useState(0);
@@ -12,7 +12,7 @@ export function QrCarousel({ chunks, interval = 800 }: { chunks: string[]; inter
 
   useEffect(() => {
     let alive = true;
-    void Promise.all(chunks.map((c) => QRCode.toDataURL(c, { errorCorrectionLevel: 'M', margin: 4, width: 720, color: { dark: '#000000', light: '#ffffff' } }))).then((u) => {
+    void Promise.all(chunks.map((c) => QRCode.toDataURL(c, { errorCorrectionLevel: 'L', margin: 4, width: 720, color: { dark: '#000000', light: '#ffffff' } }))).then((u) => {
       if (alive) {
         setUrls(u);
         setI(0);

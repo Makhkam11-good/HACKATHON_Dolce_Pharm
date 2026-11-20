@@ -91,7 +91,7 @@ export default function QrReceive() {
   const onManual = () => {
     const codes = splitManual(manual);
     const ok = codes.filter((c) => onCode(c)).length;
-    setInfo(ok ? t('Добавлено кодов: {{n}}', { n: ok }) : t('Код не распознан: строка должна начинаться с DPQR1|'));
+    setInfo(ok ? t('Добавлено кодов: {{n}}', { n: ok }) : `${t('Код не распознан: строка должна начинаться с DPQR1|')}. ${t('Вставлено')}: «${manual.trim().slice(0, 40)}…»`);
     if (ok) setManual('');
   };
 
