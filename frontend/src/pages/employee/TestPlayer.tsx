@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth';
 import { Icon } from '../../components/Icon';
 import { QuestionRenderer } from '../../components/QuestionRenderer';
+import { QrTransferButton } from '../../components/QrTransferButton';
 import { Alert, Badge, Button, Card, PageTitle, ProgressBar, Spinner } from '../../components/ui';
 import { db, type AttemptRec } from '../../offline/db';
 import { gradeHashed } from '../../offline/grading';
@@ -124,6 +125,7 @@ export default function TestPlayer() {
             {!showExpl && <div className="text-sm text-slate-500 mt-3">{t('Правильные ответы не показываются, пока остаются попытки.')}</div>}
           </Card>
         )}
+        <QrTransferButton className="mb-3" />
         <div className="flex flex-col sm:flex-row gap-2">
           <Button big onClick={() => nav(`/course/${courseId}`)}>{t('К курсу')}</Button>
           <Button big variant="secondary" onClick={() => nav('/results')}>{t('Мои результаты')}</Button>
@@ -174,7 +176,7 @@ export default function TestPlayer() {
   const unanswered = order.filter((id) => !answered(id)).length;
 
   return (
-    <div className="max-w-2xl pb-28">
+    <div className="max-w-2xl pb-bottom-bar">
       <div className="flex items-center justify-between mb-2">
         <span className="font-semibold text-slate-600">{t('Вопрос')} {idx + 1} {t('из')} {order.length}</span>
         {remaining != null && (
@@ -190,7 +192,7 @@ export default function TestPlayer() {
         ))}
       </div>
       <Card className="p-5"><QuestionRenderer key={q.id} q={q} answer={current.answers[q.id]} onChange={setAnswer} /></Card>
-      <div className="fixed bottom-[60px] md:bottom-0 inset-x-0 md:left-60 bg-white/95 border-t p-3 flex gap-2 z-20">
+      <div className="bottom-bar bg-white/95 border-t flex gap-2">
         <Button variant="secondary" icon="left" disabled={idx === 0} onClick={() => go(idx - 1)} className="flex-1">{t('Назад')}</Button>
         {idx < order.length - 1 ? (
           <Button onClick={() => go(idx + 1)} className="flex-1">{t('Далее')}<Icon name="right" /></Button>

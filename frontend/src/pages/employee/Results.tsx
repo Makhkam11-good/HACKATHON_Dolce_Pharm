@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { download, errorText } from '../../api/client';
 import { useAuth } from '../../auth';
 import { Icon } from '../../components/Icon';
+import { QrTransferButton } from '../../components/QrTransferButton';
 import { Alert, Badge, Button, Card, Empty, fmtDate, fmtDuration, PageTitle, useOnline } from '../../components/ui';
 import { db } from '../../offline/db';
 import { exportLocal } from '../../offline/localExport';
@@ -46,6 +47,7 @@ export default function Results() {
         <Button variant="secondary" icon="download" onClick={() => void exp('xlsx')}>XLSX</Button>
         <Button variant="secondary" icon="download" onClick={() => void exp('csv')}>CSV</Button>
       </>} sub={t('Выгрузка работает и без сети — из данных на телефоне')}>{t('Мои результаты')}</PageTitle>
+      {user?.role === 'employee' && <QrTransferButton className="mb-4 max-w-md" />}
       {err && <div className="mb-3"><Alert kind="error">{err}</Alert></div>}
 
       {(rejected || []).length > 0 && (

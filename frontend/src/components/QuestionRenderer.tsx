@@ -47,7 +47,7 @@ export function QuestionRenderer({ q, answer, onChange, disabled }: { q: RQuesti
   };
 
   return (
-    <div>
+    <div data-qtype={q.type}>
       <div className="text-xl font-semibold mb-2 leading-snug">{q.body}</div>
       <div className="text-sm text-slate-500 mb-4">
         {q.type === 'single' && t('Выберите один ответ')}

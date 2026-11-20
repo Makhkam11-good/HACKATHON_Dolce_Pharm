@@ -39,7 +39,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-brand-50 to-white">
+    <div className="min-h-[100dvh] flex flex-col bg-gradient-to-b from-brand-50 to-white">
       <div className="flex justify-end p-3">
         <button className="min-h-tap px-3 rounded-xl font-bold text-slate-600 hover:bg-white" onClick={() => setLang(i18n.language === 'kk' ? 'ru' : 'kk')}>
           {i18n.language === 'kk' ? 'Русский' : 'Қазақша'}

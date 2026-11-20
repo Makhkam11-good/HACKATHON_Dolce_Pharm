@@ -99,14 +99,14 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div className={`bg-white w-full ${wide ? 'sm:max-w-4xl' : 'sm:max-w-lg'} rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-auto`} onClick={(e) => e.stopPropagation()}>
+      <div className={`bg-white w-full ${wide ? 'sm:max-w-4xl' : 'sm:max-w-lg'} rounded-t-2xl sm:rounded-2xl max-h-[92dvh] overflow-auto`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
           <h3 className="text-lg font-bold">{title}</h3>
           <button className="min-h-tap min-w-tap flex items-center justify-center rounded-xl hover:bg-slate-100" onClick={onClose} aria-label="Закрыть">
             <Icon name="x" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-5 pb-[calc(1.25rem+var(--safe-bottom))] sm:pb-5">{children}</div>
       </div>
     </div>
   );

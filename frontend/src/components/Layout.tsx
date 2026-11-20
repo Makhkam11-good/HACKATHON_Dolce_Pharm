@@ -1,10 +1,11 @@
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useMatch, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { setLang } from '../i18n';
 import type { Role } from '../types';
 import { Icon, type IconName } from './Icon';
+import { QrTransferButton } from './QrTransferButton';
 import { OfflineBanner, SyncBadge, useUnsent } from './SyncBadge';
 import { Button, Modal } from './ui';
 
@@ -13,6 +14,7 @@ interface NavItem { to: string; label: string; icon: IconName; roles: Role[] }
 export const NAV: NavItem[] = [
   { to: '/dash', label: 'Дашборд', icon: 'home', roles: ['manager'] },
   { to: '/m/courses', label: 'Курсы', icon: 'book', roles: ['admin', 'methodist'] },
+  { to: '/qr-receive', label: 'Принять по QR', icon: 'camera', roles: ['admin', 'methodist', 'manager'] },
   { to: '/my', label: 'Мои курсы', icon: 'book', roles: ['employee', 'manager', 'admin', 'methodist'] },
   { to: '/results', label: 'Результаты', icon: 'award', roles: ['employee', 'manager', 'admin', 'methodist'] },
   { to: '/library', label: 'Библиотека', icon: 'library', roles: ['employee', 'manager'] },
@@ -27,14 +29,13 @@ export const NAV: NavItem[] = [
   { to: '/reports', label: 'Отчёты', icon: 'chart', roles: ['admin', 'methodist', 'manager'] },
   { to: '/a360', label: 'Оценка 360', icon: 'star', roles: ['admin', 'methodist', 'manager'] },
   { to: '/assess', label: 'Мои оценки 360', icon: 'star', roles: ['admin', 'methodist', 'manager'] },
-  { to: '/qr-receive', label: 'Принять по QR', icon: 'camera', roles: ['admin', 'methodist', 'manager'] },
 ];
 
 export const DEMO_NOTE = 'Демо-версия. Все данные синтетические и не содержат реальных персональных данных';
 
 export function Footer() {
   const { t } = useTranslation();
-  return <footer className="text-center text-xs text-slate-500 px-4 py-4 pb-24 md:pb-4">{t(DEMO_NOTE)}</footer>;
+  return <footer className="text-center text-xs text-slate-500 px-4 py-4 pb-bottom-nav">{t(DEMO_NOTE)}</footer>;
 }
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -44,6 +45,10 @@ export function Layout({ children }: { children: ReactNode }) {
   const [more, setMore] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
   const { pending } = useUnsent(user?.id);
+  // На просмотре материала и в тесте таб-бар не нужен: снизу своя панель «Назад / Далее»
+  const onMaterial = useMatch('/course/:courseId/m/:materialId');
+  const onTest = useMatch('/course/:courseId/test');
+  const hideNav = !!(onMaterial || onTest);
   if (!user) return <>{children}</>;
   const items = NAV.filter((n) => n.roles.includes(user.role));
   const bottom = items.slice(0, 4);
@@ -61,7 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
       onClick={() => setMore(false)}
       className={({ isActive }) =>
         compact
-          ? `flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[60px] text-xs font-medium ${isActive ? 'text-brand-700' : 'text-slate-500'}`
+          ? `flex-1 flex flex-col items-center justify-center gap-0.5 h-[var(--bottom-nav-h)] text-xs font-medium ${isActive ? 'text-brand-700' : 'text-slate-500'}`
           : `flex items-center gap-3 rounded-xl px-3 min-h-tap font-medium ${isActive ? 'bg-brand-600 text-white' : 'text-slate-700 hover:bg-brand-50'}`
       }
     >
@@ -71,7 +76,7 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className={`app-shell min-h-[100dvh] flex flex-col bg-slate-50 ${hideNav ? 'nav-hidden' : ''}`}>
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
         <OfflineBanner />
         <div className="flex items-center gap-2 px-3 sm:px-5 h-16">
@@ -94,7 +99,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="flex flex-1">
-        <aside className="hidden md:block w-60 shrink-0 border-r border-slate-200 bg-white p-3 space-y-1">
+        <aside className="hidden md:block w-60 shrink-0 border-r border-slate-200 bg-white p-3 space-y-1 sticky top-16 self-start h-[calc(100dvh-4rem)] overflow-y-auto">
           <div className="px-3 py-2 mb-2">
             <div className="font-semibold text-slate-900 leading-tight">{user.full_name}</div>
             <div className="text-xs text-slate-500">{user.position || t(user.role)}</div>
@@ -106,14 +111,17 @@ export function Layout({ children }: { children: ReactNode }) {
           <Footer />
         </main>
       </div>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 flex pb-[env(safe-area-inset-bottom)]">
-        {bottom.map((n) => link(n, true))}
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[60px] text-xs font-medium text-slate-500" onClick={() => setMore(true)}>
-          <Icon name="menu" size={24} />
-          {t('Ещё')}
-        </button>
-      </nav>
+      {!hideNav && (
+        <nav className="bottom-nav md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 flex">
+          {bottom.map((n) => link(n, true))}
+          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 h-[var(--bottom-nav-h)] text-xs font-medium text-slate-500" onClick={() => setMore(true)}>
+            <Icon name="menu" size={24} />
+            {t('Ещё')}
+          </button>
+        </nav>
+      )}
       <Modal open={more} onClose={() => setMore(false)} title={user.full_name}>
+        <QrTransferButton className="mb-4" onNavigate={() => setMore(false)} />
         <div className="space-y-1">{items.map((n) => link(n))}</div>
       </Modal>
       <Modal open={confirmOut} onClose={() => setConfirmOut(false)} title={t('Есть неотправленные данные')}>

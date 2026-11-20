@@ -59,7 +59,7 @@ export default function MaterialView() {
   const next = idx < pkg.materials.length - 1 ? pkg.materials[idx + 1] : null;
 
   return (
-    <div className="max-w-4xl pb-24">
+    <div className="max-w-4xl pb-bottom-bar">
       <button className="text-brand-700 font-medium mb-2 min-h-tap flex items-center" onClick={() => nav(`/course/${courseId}`)}>
         <Icon name="left" />{pkg.course.title}
       </button>
@@ -88,7 +88,7 @@ export default function MaterialView() {
           : <PdfViewer blob={blob} />
       )}
 
-      <div className="fixed bottom-[60px] md:bottom-0 inset-x-0 md:left-60 bg-white/95 border-t p-3 flex gap-2 z-20">
+      <div className="bottom-bar bg-white/95 border-t flex gap-2">
         <Button variant="secondary" icon="left" disabled={!prev} onClick={() => prev && nav(`/course/${courseId}/m/${prev.id}`, { replace: true })} className="flex-1">{t('Назад')}</Button>
         {next ? (
           <Button onClick={() => nav(`/course/${courseId}/m/${next.id}`, { replace: true })} className="flex-1">{t('Далее')}<Icon name="right" /></Button>

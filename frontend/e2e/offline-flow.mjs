@@ -180,9 +180,8 @@ await mp.goto(`${BASE}/login`);
 await mp.getByRole('button', { name: /manager1/ }).click();
 await mp.waitForURL('**/dash');
 await mp.goto(`${BASE}/qr-receive`);
-await mp.getByText('Ввести данные вручную').click();
 const feed = async (list) => {
-  await mp.locator('textarea').fill([...list].join('\n'));
+  await mp.locator('#qr-manual').fill([...list].join('\n'));
   await mp.getByRole('button', { name: 'Добавить' }).click();
 };
 await feed([...chunks].reverse());
@@ -192,7 +191,6 @@ await mp.getByRole('button', { name: 'Демо: отправить изменё�
 await mp.getByText('Подпись не совпала — пакет изменён или подделан. Данные не приняты.').waitFor();
 ok('изменённый пакет отклонён: «Подпись не совпала»');
 await mp.getByRole('button', { name: 'Новый приём' }).click();
-if (!(await mp.locator('textarea').isVisible())) await mp.getByText('Ввести данные вручную').click();
 await feed(chunks);
 await mp.getByText(/Пакет уже был принят ранее/).waitFor();
 ok('повторное сканирование того же пакета: «уже был принят», без дублей');

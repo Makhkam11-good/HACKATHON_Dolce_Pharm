@@ -17,7 +17,7 @@ export default function Verify() {
     api<V>(`/api/certificates/verify/${encodeURIComponent(code || '')}`).then(setV).catch(() => setErr(true));
   }, [code]);
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-slate-50 flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow border max-w-md w-full p-6 text-center">
         <img src="/icons/favicon.svg" className="w-14 h-14 mx-auto mb-2" alt="" />
         <div className="font-bold text-brand-800 mb-4">Dolce Pharm · {t('проверка сертификата')}</div>

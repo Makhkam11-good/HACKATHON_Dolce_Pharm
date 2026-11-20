@@ -11,6 +11,40 @@
 html, body { background: #f8fafc; }
 body { margin: 0; overscroll-behavior-y: none; }
 
+/*
+ * Нижняя навигация и закреплённые снизу панели.
+ * --safe-bottom — «полоска домой» iPhone (env(safe-area-inset-bottom), нужен viewport-fit=cover).
+ * Вынесено в переменную, чтобы E2E-тест мог сымитировать вырез iPhone в Chromium (там env() = 0).
+ * --bottom-offset — сколько места снизу занимает таб-бар: 0 на ПК и на экранах, где таб-бар скрыт
+ * (просмотр материала, тест), иначе высота таб-бара + safe area.
+ */
+:root {
+  --bottom-nav-h: 60px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+.app-shell {
+  --bottom-offset: calc(var(--bottom-nav-h) + var(--safe-bottom));
+  --bar-safe: 0px;
+}
+.app-shell.nav-hidden { --bottom-offset: 0px; --bar-safe: var(--safe-bottom); }
+@media (min-width: 768px) {
+  .app-shell { --bottom-offset: 0px; --bar-safe: var(--safe-bottom); }
+}
+.bottom-nav { height: calc(var(--bottom-nav-h) + var(--safe-bottom)); padding-bottom: var(--safe-bottom); }
+/* Закреплённая панель действий («Назад / Далее», «Ответить / Далее») — всегда над таб-баром */
+.bottom-bar {
+  position: fixed; left: 0; right: 0; z-index: 35;
+  bottom: var(--bottom-offset);
+  padding: 0.75rem 0.75rem calc(0.75rem + var(--bar-safe));
+}
+@media (min-width: 768px) { .bottom-bar { left: 15rem; } }
+/* Отступ контента под панелью действий (её высота ≈ 72px) и таб-баром */
+.pb-bottom-bar { padding-bottom: calc(6rem + var(--bar-safe)); }
+/* Отступ в конце страницы, чтобы последний абзац не уходил под таб-бар */
+.pb-bottom-nav { padding-bottom: calc(var(--bottom-offset) + 1rem); }
+/* На экранах с панелью действий подвал тоже должен заканчиваться над ней */
+.app-shell:has(.bottom-bar) .pb-bottom-nav { padding-bottom: calc(var(--bottom-offset) + 5.5rem + var(--bar-safe)); }
+
 /* Markdown-блоки */
 .md h1 { @apply text-2xl font-bold mt-2 mb-3; }
 .md h2 { @apply text-xl font-bold mt-5 mb-2; }
