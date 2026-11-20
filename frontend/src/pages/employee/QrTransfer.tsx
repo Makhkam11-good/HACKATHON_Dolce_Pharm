@@ -46,7 +46,7 @@ export default function QrTransfer() {
     setMsg('');
     const dev = await getDevice(user!.id);
     if (!dev) {
-      setErr(t('Устройство не зарегистрировано: войдите хотя бы раз при наличии сети.'));
+      setErr(t('Телефон ещё не подключён: войдите в приложение хотя бы раз, когда есть интернет.'));
       return;
     }
     const list = items || [];
@@ -67,7 +67,7 @@ export default function QrTransfer() {
     await db.outbox.where('id').anyOf(batch.ids).modify((i) => {
       if (i.status === 'pending') i.status = 'sent_qr';
     });
-    setMsg(t('Отмечено как переданное мастеру. При появлении сети данные будут перепроверены сервером.'));
+    setMsg(t('Готово! Результаты у мастера. Когда появится интернет, телефон ещё раз всё проверит.'));
     setBatch(null);
   };
 
@@ -76,29 +76,29 @@ export default function QrTransfer() {
     if (!dev || !text.startsWith('DPACK1|')) return;
     const ack = await verifyAck(text, dev.secretB64);
     if (!ack) {
-      setErr(t('Подтверждение не прошло проверку подписи'));
+      setErr(t('Этот код не подходит. Попросите мастера показать код ещё раз.'));
       return;
     }
     const n = await applyAck(ack);
     setScanAck(false);
     setBatch(null);
     setErr('');
-    setMsg(t('Сервер подтвердил приём: {{n}} записей.', { n: n || ack.accepted }));
+    setMsg(t('Мастер принял результаты: {{n}}. Всё отправлено.', { n: n || ack.accepted }));
   };
 
   const count = (items || []).length;
   return (
     <div className="max-w-2xl">
-      <PageTitle sub={t('Если в цеху нет сети: покажите коды мастеру — его компьютер передаст данные на сервер.')}>{t('Передать мастеру без сети')}</PageTitle>
+      <PageTitle sub={t('Если в цеху нет интернета, покажите коды мастеру — его компьютер всё отправит.')}>{t('Передать результаты мастеру')}</PageTitle>
       {msg && <div className="mb-3"><Alert kind="success">{msg}</Alert></div>}
       {err && <div className="mb-3"><Alert kind="error">{err}</Alert></div>}
 
       {!batch && !scanAck && (
         <Card className="p-5 space-y-3">
-          <div className="text-lg">{t('Не отправлено записей')}: <b>{count}</b></div>
-          {waiting > 0 && <div className="text-sm text-slate-500">{t('Передано через QR и ждут подтверждения сети')}: {waiting}</div>}
+          <div className="text-lg">{t('Ждут отправки')}: <b>{count}</b></div>
+          {waiting > 0 && <div className="text-slate-600">{t('Уже переданы мастеру, ждём подтверждения')}: {waiting}</div>}
           <Button big icon="qr" className="w-full" disabled={!count} onClick={() => void build()}>
-            {count ? t('Показать QR-коды') : t('Всё уже отправлено')}
+            {count ? t('Показать коды мастеру') : t('Всё уже отправлено')}
           </Button>
           {shown && (
             <button className="w-full min-h-tap text-brand-700 font-medium flex items-center justify-center gap-2" onClick={() => setScanAck(true)}>
@@ -112,9 +112,8 @@ export default function QrTransfer() {
         <div className="space-y-4">
           <Alert kind="info"><b>{t('Покажите этот экран камере компьютера мастера')}</b></Alert>
           <QrCarousel chunks={batch.chunks} />
-          <div className="text-center text-sm text-slate-500">
-            {t('Пакет')} <b className="font-mono">{batch.id}</b>: {t('событий')} {batch.kinds.event || 0}, {t('попыток теста')} {batch.kinds.attempt || 0}
-            {batch.kinds.assessment_response ? `, ${t('оценок 360')} ${batch.kinds.assessment_response}` : ''}
+          <div className="text-center text-slate-600">
+            {t('Передаём записей')}: <b>{batch.ids.length}</b>{batch.kinds.attempt ? ` · ${t('тестов')}: ${batch.kinds.attempt}` : ''}
           </div>
           <Button big variant="success" icon="check" className="w-full" onClick={() => void done()}>{t('Готово, мастер принял')}</Button>
           <div className="grid grid-cols-2 gap-2">
@@ -128,7 +127,7 @@ export default function QrTransfer() {
 
       {scanAck && (
         <div className="space-y-3 mt-4">
-          <Alert kind="info">{t('Наведите камеру на QR-подтверждение на экране мастера')}</Alert>
+          <Alert kind="info">{t('Наведите камеру телефона на код на экране мастера')}</Alert>
           <QrScanner onResult={(txt) => void onAck(txt)} autoStart preferBack />
           <Button variant="secondary" onClick={() => setScanAck(false)}>{t('Отмена')}</Button>
         </div>

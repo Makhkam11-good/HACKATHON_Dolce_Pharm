@@ -25,7 +25,7 @@ export default function Trainer() {
   if (list === undefined) return <Spinner />;
   if (scenarioId) {
     const s = list.find((x) => x.id === scenarioId)?.scenario;
-    if (!s) return <Alert kind="warn">{t('Сценарий не сохранён на устройстве. Скачайте курс или откройте при наличии сети.')}</Alert>;
+    if (!s) return <Alert kind="warn">{t('Тренажёр не сохранён на телефоне. Сохраните курс или откройте, когда есть интернет.')}</Alert>;
     return (
       <div className="max-w-3xl">
         <button className="text-brand-700 font-medium mb-2 min-h-tap flex items-center" onClick={() => nav('/trainer')}><Icon name="left" />{t('Тренажёр')}</button>
@@ -38,13 +38,13 @@ export default function Trainer() {
   }
   return (
     <div className="max-w-2xl">
-      <PageTitle sub={t('Диалоговые ситуации: примите правильные решения. Работает без сети.')}>{t('Тренажёр')}</PageTitle>
+      <PageTitle sub={t('Ситуации из цеха: выберите, как поступить. Можно без интернета.')}>{t('Тренажёр')}</PageTitle>
       {!list.length && <Empty icon="chat">{t('Нет доступных сценариев')}</Empty>}
       <div className="space-y-2">
         {list.map(({ scenario: s }) => (
           <Card key={s.id} className="p-4 flex items-center gap-3" onClick={() => nav(`/trainer/${s.id}`)}>
             <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center"><Icon name="chat" /></div>
-            <div className="flex-1"><div className="font-semibold">{s.title}</div><div className="text-sm text-slate-500">{s.description}</div></div>
+            <div className="flex-1"><div className="font-semibold">{s.title}</div><div className="text-slate-600">{s.description}</div></div>
             <Icon name="right" className="text-slate-400" />
           </Card>
         ))}

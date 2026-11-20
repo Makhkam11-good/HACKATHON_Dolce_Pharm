@@ -34,9 +34,10 @@ async function api(path, token, body) {
   return r.json();
 }
 
-async function session(browser, devName, user) {
+async function session(browser, devName, user, { onboarding = false } = {}) {
   const { safeBottom, ...d } = DEVICES[devName];
   const ctx = await browser.newContext({ ...d, ignoreHTTPSErrors: true, locale: 'ru-RU' });
+  if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('onboarding:skip', '1'); } catch { /* */ } });
   if (safeBottom) {
     await ctx.addInitScript((px) => {
       const add = () => { const s = document.createElement('style'); s.textContent = `:root{--safe-bottom:${px}px !important}`; document.head.appendChild(s); };
@@ -76,22 +77,36 @@ const courses = await api('/api/courses', meth.access_token);
 const anyCourse = (Array.isArray(courses) ? courses : courses.items || [])[0];
 const assessments = await api('/api/assessments', meth.access_token);
 
-for (const devName of Object.keys(DEVICES)) {
+const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+for (const devName of Object.keys(DEVICES).filter((d) => !ONLY.length || ONLY.includes(d))) {
   console.log(`=== ${devName}`);
   const mobile = devName !== 'desktop';
 
   // гость: вход
   { const s = await session(browser, devName, null); await s.go('/login', 'login'); await s.ctx.close(); }
 
+  // сотрудник: знакомство при первом входе (только телефоны)
+  if (mobile) {
+    const { ctx, page, shot } = await session(browser, devName, 'op04', { onboarding: true });
+    await page.goto(`${BASE}/my`).catch(() => {});
+    const skip = page.getByRole('button', { name: /Далее/ });
+    for (let k = 1; k <= 3 && await skip.count(); k++) { await shot(`onboarding-${k}`); if (k < 3) await skip.click(); }
+    await ctx.close();
+  }
+
   // сотрудник
   {
     const { ctx, page, shot, go } = await session(browser, devName, 'op03');
     await go('/my', 'my-courses');
-    const card = page.locator('a, div').filter({ hasText: course.title }).filter({ has: page.getByRole('button', { name: /Скачать|Сохранить/ }) }).last();
-    if (await card.count()) {
-      await card.getByRole('button', { name: /Скачать|Сохранить/ }).first().click();
-      await page.getByText(/Доступен офлайн|Сохранено/).first().waitFor({ timeout: 120000 }).catch(() => {});
+    // сохраняем курс на телефон (новая главная — кнопка в большой карточке или в строке курса)
+    for (let k = 0; k < 3; k++) {
+      const btn = page.getByRole('button', { name: /Скачать офлайн|Сохранить на телефон/ }).first();
+      if (!(await btn.count())) break;
+      await btn.click();
+      await page.waitForFunction(() => !document.body.innerText.includes('Сохраняем на телефон'), null, { timeout: 120000 }).catch(() => {});
+      await page.waitForTimeout(800);
     }
+    await shot('my-courses-saved');
     await go(`/course/${course.course_id}`, 'course');
     for (const m of pkg.materials) await go(`/course/${course.course_id}/m/${m.id}`, `material-${m.type}`, { wait: 2000 });
     await go(`/course/${course.course_id}/test`, 'test-start');
@@ -103,7 +118,10 @@ for (const devName of Object.keys(DEVICES)) {
         const type = await page.locator('[data-qtype]').getAttribute('data-qtype').catch(() => null);
         if (type && !seen.has(type)) { seen.add(type); await shot(`test-${type}`); }
         const next = page.locator('.bottom-bar button').last();
-        if (!(await next.count()) || /Завершить/.test(await next.innerText())) break;
+        if (!(await next.count()) || /Завершить/.test(await next.innerText())) {
+          if (await next.count()) { await next.click(); await shot('test-confirm-finish'); }
+          break;
+        }
         await next.click();
       }
     }

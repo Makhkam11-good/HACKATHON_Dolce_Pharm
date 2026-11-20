@@ -9,18 +9,27 @@ import { Icon } from './Icon';
 export interface RQuestion { id: string; type: 'single' | 'multi' | 'open' | 'order'; body: string; options?: { id: string; text: string }[] }
 
 function SortItem({ id, text, index, total, move }: { id: string; text: string; index: number; total: number; move: (from: number, to: number) => void }) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 bg-white border-2 rounded-xl p-2 ${isDragging ? 'border-brand-500 shadow-lg z-10 relative' : 'border-slate-200'}`}>
-      <button className="touch-none min-h-tap min-w-tap flex items-center justify-center text-slate-400 cursor-grab" {...attributes} {...listeners} aria-label="Перетащить">
-        <Icon name="grip" />
-      </button>
-      <span className="w-7 h-7 shrink-0 rounded-full bg-brand-100 text-brand-800 font-bold flex items-center justify-center">{index + 1}</span>
-      <span className="flex-1 text-lg">{text}</span>
-      <div className="flex flex-col">
-        <button className="min-w-tap h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 disabled:opacity-30" disabled={index === 0} onClick={() => move(index, index - 1)} aria-label="Выше"><Icon name="up" /></button>
-        <button className="min-w-tap h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 disabled:opacity-30" disabled={index === total - 1} onClick={() => move(index, index + 1)} aria-label="Ниже"><Icon name="down" /></button>
+      className={`bg-white border-2 rounded-2xl p-3 ${isDragging ? 'border-brand-600 shadow-lift z-10 relative' : 'border-slate-300'}`}>
+      <div className="flex items-start gap-3">
+        <span className="w-9 h-9 shrink-0 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center text-lg">{index + 1}</span>
+        <span className="flex-1 text-lg pt-1">{text}</span>
+        {/* перетаскивание — дополнительный способ */}
+        <button className="touch-none min-h-tap min-w-tap flex items-center justify-center text-slate-500 cursor-grab rounded-xl hover:bg-slate-100" {...attributes} {...listeners} aria-label={t('Перетащить')}>
+          <Icon name="grip" />
+        </button>
+      </div>
+      {/* основной способ — кнопки «Выше / Ниже» с подписями */}
+      <div className="grid grid-cols-2 gap-3 mt-2">
+        <button className="min-h-tap rounded-xl border-2 border-slate-300 flex items-center justify-center gap-1.5 font-semibold text-slate-800 hover:border-brand-600 disabled:opacity-40" disabled={index === 0} onClick={() => move(index, index - 1)}>
+          <Icon name="up" size={20} />{t('Выше')}
+        </button>
+        <button className="min-h-tap rounded-xl border-2 border-slate-300 flex items-center justify-center gap-1.5 font-semibold text-slate-800 hover:border-brand-600 disabled:opacity-40" disabled={index === total - 1} onClick={() => move(index, index + 1)}>
+          <Icon name="down" size={20} />{t('Ниже')}
+        </button>
       </div>
     </li>
   );
@@ -48,15 +57,16 @@ export function QuestionRenderer({ q, answer, onChange, disabled }: { q: RQuesti
 
   return (
     <div data-qtype={q.type}>
-      <div className="text-xl font-semibold mb-2 leading-snug">{q.body}</div>
-      <div className="text-sm text-slate-500 mb-4">
+      <h2 className="text-xl font-bold mb-2 leading-snug">{q.body}</h2>
+      <div className="text-lg font-semibold text-accent-700 mb-4 flex items-center gap-2">
+        <Icon name="info" size={20} />
         {q.type === 'single' && t('Выберите один ответ')}
-        {q.type === 'multi' && t('Выберите все верные')}
-        {q.type === 'order' && t('Расставьте в правильном порядке: перетащите или используйте стрелки')}
+        {q.type === 'multi' && t('Можно выбрать несколько')}
+        {q.type === 'order' && t('Расставьте по порядку: кнопки «Выше» и «Ниже»')}
         {q.type === 'open' && t('Напишите ответ своими словами')}
       </div>
       {(q.type === 'single' || q.type === 'multi') && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {opts.map((o) => {
             const on = sel.has(o.id);
             return (
@@ -70,10 +80,10 @@ export function QuestionRenderer({ q, answer, onChange, disabled }: { q: RQuesti
                     onChange({ selected_option_ids: [...s] });
                   }
                 }}
-                className={`w-full text-left flex items-center gap-3 rounded-xl border-2 p-3 min-h-[56px] text-lg transition-colors ${on ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:border-brand-300'}`}
+                className={`w-full text-left flex items-center gap-3 rounded-2xl border-2 p-4 min-h-[64px] text-lg transition-colors ${on ? 'border-brand-600 bg-brand-50 text-slate-900 font-semibold' : 'border-slate-300 bg-white hover:border-brand-400'}`}
                 role={q.type === 'single' ? 'radio' : 'checkbox'} aria-checked={on}>
-                <span className={`w-7 h-7 shrink-0 border-2 flex items-center justify-center ${q.type === 'single' ? 'rounded-full' : 'rounded-md'} ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'}`}>
-                  {on && (q.type === 'single' ? <span className="w-3 h-3 rounded-full bg-white" /> : <Icon name="check" size={18} />)}
+                <span className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center ${q.type === 'single' ? 'rounded-full' : 'rounded-lg'} ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-400 bg-white'}`}>
+                  {on && <Icon name="check" size={20} strokeWidth={3} />}
                 </span>
                 <span>{o.text}</span>
               </button>
@@ -82,13 +92,13 @@ export function QuestionRenderer({ q, answer, onChange, disabled }: { q: RQuesti
         </div>
       )}
       {q.type === 'open' && (
-        <textarea disabled={disabled} className="w-full rounded-xl border-2 border-slate-200 p-3 text-lg min-h-[160px] focus:border-brand-500 focus:outline-none"
+        <textarea disabled={disabled} className="w-full rounded-2xl border-2 border-slate-300 p-4 text-lg min-h-[200px] focus:border-brand-600 focus:outline-none" aria-label={t('Ваш ответ')}
           value={answer?.answer_text || ''} onChange={(e) => onChange({ answer_text: e.target.value })} placeholder={t('Ваш ответ…')} />
       )}
       {q.type === 'order' && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={order} strategy={verticalListSortingStrategy}>
-            <ol className="space-y-2">
+            <ol className="space-y-3">
               {order.map((id, i) => (
                 <SortItem key={id} id={id} index={i} total={order.length} text={opts.find((o) => o.id === id)?.text || ''} move={move} />
               ))}

@@ -66,7 +66,7 @@ export function ScenarioPlayer({ scenario, onFinish }: { scenario: Scenario; onF
         <div className="flex items-end gap-3 fade-in" key={nodeId}>
           <div className="shrink-0"><CharacterAvatar emotion={node.emotion} size={130} /></div>
           <div className="relative bg-white rounded-2xl rounded-bl-none shadow-lg p-4 mb-10 flex-1">
-            {speaker && <div className="text-sm font-bold text-brand-700 mb-1">{speaker}</div>}
+            {speaker && <div className="font-bold text-brand-700 mb-1">{speaker}</div>}
             <div className="text-lg leading-snug">{node.text}</div>
           </div>
         </div>
@@ -78,10 +78,10 @@ export function ScenarioPlayer({ scenario, onFinish }: { scenario: Scenario; onF
           ))}
           {node.end && (
             <div className="bg-white rounded-2xl p-5 shadow-lg fade-in">
-              <div className="text-sm text-slate-500">{t('Итог')}</div>
+              <div className="text-slate-600">{t('Итог')}</div>
               <div className="text-3xl font-black mb-1">{total} / {max} <span className="text-lg text-slate-500">({max ? Math.round((100 * Math.max(0, total)) / max) : 0}%)</span></div>
               {node.feedback && <div className="text-lg mb-3">{node.feedback}</div>}
-              <div className="text-xs text-slate-500 mb-3">{t('Путь')}: {path.join(' → ')}</div>
+              <div className="text-[0.85rem] text-slate-600 mb-3">{t('Путь')}: {path.join(' → ')}</div>
               <Button big icon="refresh" onClick={restart}>{t('Пройти ещё раз')}</Button>
             </div>
           )}

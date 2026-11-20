@@ -20,6 +20,12 @@ export function materialRequired(m: PkgMaterial): boolean {
   return m.type !== 'link';
 }
 
+/** Следующий шаг по курсу: первый обязательный неизученный материал («Материал 2 из 4»). null — все изучены. */
+export function nextMaterial(mats: PkgMaterial[], byMat: Map<string, ProgressRec>): { material: PkgMaterial; index: number; total: number } | null {
+  const i = mats.findIndex((m) => materialRequired(m) && !materialStudied(m, byMat.get(m.id)));
+  return i < 0 ? null : { material: mats[i], index: i + 1, total: mats.length };
+}
+
 export function studyProgress(mats: PkgMaterial[], byMat: Map<string, ProgressRec>) {
   const required = mats.filter(materialRequired);
   const done = required.filter((m) => materialStudied(m, byMat.get(m.id))).length;

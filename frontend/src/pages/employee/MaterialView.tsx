@@ -6,12 +6,12 @@ import { useAuth } from '../../auth';
 import { Icon } from '../../components/Icon';
 import { MarkdownBlock } from '../../components/MarkdownBlock';
 import { PdfViewer } from '../../components/PdfViewer';
-import { Alert, Button, fmtDuration, Spinner, useOnline } from '../../components/ui';
+import { Banner, Button, EmptyState, fmtHuman, ProgressBar, Spinner, useOnline } from '../../components/ui';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { getFileBlob } from '../../offline/downloader';
 import { useCourseProgress } from '../../offline/progress';
 import { closeMaterial, liveSeconds, markMaterialOpened, openMaterial, subscribeTracker } from '../../offline/timeTracker';
-import { useManifest } from './CourseView';
+import { BackLink, MAT_KIND, useManifest } from './CourseView';
 
 export default function MaterialView() {
   const { courseId, materialId } = useParams();
@@ -51,49 +51,68 @@ export default function MaterialView() {
   }, [mat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (m === undefined) return <Spinner />;
-  if (!pkg || !mat) return <Alert kind="warn">{t('Материал не найден на устройстве')}</Alert>;
+  if (!pkg || !mat) {
+    return (
+      <EmptyState icon="phone" title={t('Материал не найден на телефоне')} action={<Button icon="left" onClick={() => nav(`/course/${courseId}`)}>{t('Вернуться к курсу')}</Button>}>
+        {t('Подключитесь к интернету и сохраните курс на телефон ещё раз.')}
+      </EmptyState>
+    );
+  }
 
   const saved = prog.byMat.get(mat.id)?.seconds || 0;
   const total = saved + liveSeconds(mat.id);
   const prev = idx > 0 ? pkg.materials[idx - 1] : null;
   const next = idx < pkg.materials.length - 1 ? pkg.materials[idx + 1] : null;
+  const need = mat.min_seconds || 0;
+  const enough = !need || total >= need;
 
   return (
-    <div className="max-w-4xl pb-bottom-bar">
-      <button className="text-brand-700 font-medium mb-2 min-h-tap flex items-center" onClick={() => nav(`/course/${courseId}`)}>
-        <Icon name="left" />{pkg.course.title}
-      </button>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h1 className="text-xl font-bold">{idx + 1}. {mat.title}</h1>
-        {mat.type !== 'link' && (
-          <div className={`rounded-full px-3 py-1 text-sm font-semibold ${mat.min_seconds && total < mat.min_seconds ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>
-            <Icon name="clock" size={14} className="inline mr-1" />
-            {fmtDuration(total)}{mat.min_seconds ? ` / ${fmtDuration(mat.min_seconds)}` : ''}
+    <div className="max-w-4xl mx-auto pb-bottom-bar">
+      <BackLink to={`/course/${courseId}`}>{pkg.course.title}</BackLink>
+      <div className="text-slate-600 font-semibold">{t('Материал {{k}} из {{n}}', { k: idx + 1, n: pkg.materials.length })} · {t(MAT_KIND[mat.type])}</div>
+      <h1 className="text-[1.5rem] font-bold mb-3">{mat.title}</h1>
+      {mat.type !== 'link' && need > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 mb-4" data-testid="study-time">
+          <div className="flex items-center justify-between gap-3 mb-1.5">
+            <span className={`font-semibold flex items-center gap-1.5 ${enough ? 'text-emerald-700' : 'text-slate-800'}`}>
+              <Icon name={enough ? 'checkCircle' : 'clock'} size={20} />
+              {enough ? t('Изучено — можно идти дальше') : t('Изучите не меньше {{t}}', { t: fmtHuman(need) })}
+            </span>
+            <span className="text-slate-600 font-semibold">{fmtHuman(Math.min(total, need))} / {fmtHuman(need)}</span>
           </div>
-        )}
-      </div>
+          <ProgressBar value={(100 * Math.min(total, need)) / need} label={t('Время изучения')} />
+        </div>
+      )}
 
-      {mat.type === 'text' && <div className="bg-white rounded-2xl border p-5"><MarkdownBlock text={mat.body_md || ''} /></div>}
+      {mat.type === 'text' && <div className="bg-white rounded-2xl border border-slate-200 p-5"><MarkdownBlock text={mat.body_md || ''} /></div>}
       {mat.type === 'link' && (
-        <div className="bg-white rounded-2xl border p-5 space-y-3">
-          <Alert kind={online ? 'info' : 'warn'}>{t('Внешняя ссылка — требует сети. Это справочный материал: он не обязателен для допуска к тесту, время по ссылке не учитывается.')}</Alert>
-          <div className="font-mono break-all text-slate-700">{mat.url}</div>
-          <a href={mat.url} target="_blank" rel="noreferrer noopener" onClick={() => online && courseId && markMaterialOpened(courseId, mat.id)}><Button icon="link" disabled={!online}>{t('Открыть в браузере')}</Button></a>
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+          <Banner kind={online ? 'info' : 'offline'}>
+            {online ? t('Это ссылка на сайт для справки. Для теста её открывать не обязательно.') : t('Нет интернета — ссылку откроете позже. Для теста она не обязательна.')}
+          </Banner>
+          <div className="break-all text-slate-700">{mat.url}</div>
+          <a href={mat.url} target="_blank" rel="noreferrer noopener" onClick={() => online && courseId && markMaterialOpened(courseId, mat.id)}
+            className={online ? '' : 'pointer-events-none'} aria-disabled={!online}>
+            <Button icon="link" disabled={!online} className="w-full sm:w-auto">{t('Открыть сайт')}</Button>
+          </a>
         </div>
       )}
       {mat.file && (
-        err ? <Alert kind="error">{online ? err : t('Файл не скачан на устройство. Подключитесь к сети.')}</Alert>
-          : !blob ? <Spinner label={t('Загрузка материала…')} />
+        err ? <Banner kind={online ? 'error' : 'offline'}>{online ? err : t('Этот файл не сохранён на телефоне. Подключитесь к интернету.')}</Banner>
+          : !blob ? <Spinner label={t('Открываем материал…')} />
           : mat.type === 'video' ? <VideoPlayer blob={blob} />
           : <PdfViewer blob={blob} />
       )}
 
-      <div className="bottom-bar bg-white/95 border-t flex gap-2">
-        <Button variant="secondary" icon="left" disabled={!prev} onClick={() => prev && nav(`/course/${courseId}/m/${prev.id}`, { replace: true })} className="flex-1">{t('Назад')}</Button>
+      <div className="bottom-bar bg-white/95 border-t border-slate-200 flex gap-3">
+        <Button variant="secondary" icon="left" disabled={!prev} onClick={() => prev && nav(`/course/${courseId}/m/${prev.id}`, { replace: true })} className="flex-1 min-h-big">{t('Назад')}</Button>
         {next ? (
-          <Button onClick={() => nav(`/course/${courseId}/m/${next.id}`, { replace: true })} className="flex-1">{t('Далее')}<Icon name="right" /></Button>
+          <Button onClick={() => nav(`/course/${courseId}/m/${next.id}`, { replace: true })} className="flex-1 min-h-big">{t('Далее')}<Icon name="right" /></Button>
         ) : (
-          <Button onClick={() => nav(`/course/${courseId}`)} className="flex-1">{t('К тесту')}<Icon name="right" /></Button>
+          // в тест — только когда все материалы изучены (как и на странице курса), иначе — к списку материалов
+          <Button onClick={() => nav(pkg.test && prog.allStudied ? `/course/${courseId}/test` : `/course/${courseId}`)} className="flex-1 min-h-big">
+            {pkg.test && prog.allStudied ? t('Перейти к тесту') : t('К курсу')}<Icon name="right" />
+          </Button>
         )}
       </div>
     </div>

@@ -5,8 +5,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../auth';
 import { Icon } from '../../components/Icon';
 import { QuestionRenderer } from '../../components/QuestionRenderer';
-import { QrTransferButton } from '../../components/QrTransferButton';
-import { Alert, Badge, Button, Card, PageTitle, ProgressBar, Spinner } from '../../components/ui';
+import { usePendingCount } from '../../components/QrTransferButton';
+import { Banner, Button, Card, ConfirmModal, EmptyState, ProgressBar, Spinner, StatusBadge, useOnline } from '../../components/ui';
 import { db, type AttemptRec } from '../../offline/db';
 import { gradeHashed } from '../../offline/grading';
 import { enqueue } from '../../offline/outbox';
@@ -14,7 +14,7 @@ import { useAttempts, useSyncState } from '../../offline/progress';
 import { syncNow } from '../../offline/syncEngine';
 import { testFinished, testStarted } from '../../offline/timeTracker';
 import type { Answer } from '../../types';
-import { useManifest } from './CourseView';
+import { BackLink, useManifest } from './CourseView';
 
 // монотонные часы валидны только в пределах одной загрузки страницы
 const PAGE_ID = Math.random().toString(36).slice(2);
@@ -46,6 +46,9 @@ export default function TestPlayer() {
   const result = useLiveQuery(() => (resultId ? db.attempts.get(resultId) : undefined), [resultId]);
   const [now, setNow] = useState(Date.now());
   const finishing = useRef(false);
+  const [confirm, setConfirm] = useState(false);
+  const online = useOnline();
+  const pending = usePendingCount(user?.id);
 
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1000);
@@ -79,7 +82,13 @@ export default function TestPlayer() {
 
   const order = useMemo(() => current?.questionOrder || [], [current?.questionOrder]);
   if (m === undefined || current === undefined) return <Spinner />;
-  if (!test) return <Alert kind="warn">{t('Тест недоступен офлайн. Откройте курс при наличии сети.')}</Alert>;
+  if (!test) {
+    return (
+      <EmptyState icon="phone" title={t('Тест не сохранён на телефоне')} action={<Button icon="left" onClick={() => nav(`/course/${courseId}`)}>{t('Вернуться к курсу')}</Button>}>
+        {t('Подключитесь к интернету и сохраните курс на телефон ещё раз.')}
+      </EmptyState>
+    );
+  }
 
   const used = attempts.length;
   const left = test.max_attempts - used;
@@ -90,46 +99,56 @@ export default function TestPlayer() {
     const wrong = (result.results || []).filter((r) => r.is_correct === false || (r.is_correct !== true && !r.needs_review));
     const review = (result.results || []).filter((r) => r.needs_review);
     const st = result.serverStatus || result.status;
+    const score = result.serverScore ?? result.clientScore;
+    const look = st === 'passed'
+      ? { icon: 'checkCircle' as const, cls: 'text-emerald-700 bg-emerald-100', title: t('Тест сдан!'), text: t('Поздравляем, курс пройден.') }
+      : st === 'pending_review'
+        ? { icon: 'clock' as const, cls: 'text-amber-800 bg-amber-100', title: t('Ответ проверяет методист'), text: t('Результат появится в разделе «Результаты».') }
+        : { icon: 'xCircle' as const, cls: 'text-red-700 bg-red-100', title: t('Тест не сдан'), text: left > 0 ? t('Можно пересдать. Осталось попыток: {{n}}', { n: left }) : t('Попытки закончились. Обратитесь к мастеру.') };
     return (
-      <div className="max-w-2xl">
-        <PageTitle>{t('Результат')}</PageTitle>
+      <div className="max-w-2xl mx-auto">
         <Card className="p-6 text-center mb-4">
-          <div className={`text-6xl font-black mb-2 ${st === 'passed' ? 'text-emerald-600' : st === 'pending_review' ? 'text-amber-600' : 'text-red-600'}`}>
-            {result.serverScore ?? result.clientScore}%
+          <span className={`w-20 h-20 rounded-full mx-auto mb-3 flex items-center justify-center ${look.cls}`}><Icon name={look.icon} size={44} /></span>
+          <h1 className="text-[1.75rem] font-bold">{look.title}</h1>
+          <div className="text-5xl font-extrabold text-slate-900 my-2" data-testid="score">{score}%</div>
+          <div className="text-slate-700 text-lg">{t('Чтобы сдать, нужно')} {passScore}%. {look.text}</div>
+          <div className="mt-3">
+            {result.serverStatus
+              ? <StatusBadge status="passed" label={`${t('Результат получен')}${result.certificateNumber ? ` · ${t('сертификат')} ${result.certificateNumber}` : ''}`} />
+              : <StatusBadge status="saved" label={online ? t('Сохранено, отправляем…') : t('Сохранено на телефоне, отправим сами')} />}
           </div>
-          <div className="text-xl font-bold mb-1">
-            {st === 'passed' ? t('Сдано') : st === 'pending_review' ? t('На проверке у методиста') : t('Не сдано')}
-          </div>
-          {result.serverStatus ? (
-            <Badge color="green"><Icon name="check" size={14} />{t('Подтверждено сервером')}{result.certificateNumber ? ` · ${t('сертификат')} ${result.certificateNumber}` : ''}</Badge>
-          ) : (
-            <div className="text-slate-600">{t('Предварительный результат. Итог подтвердится при синхронизации.')}</div>
-          )}
         </Card>
-        {review.length > 0 && <div className="mb-3"><Alert kind="warn">{t('Открытых ответов на ручной проверке')}: {review.length}</Alert></div>}
+        <div className="flex flex-col gap-3 mb-5">
+          {st !== 'passed' && st !== 'pending_review' && left > 0
+            ? <Button big icon="refresh" onClick={() => setResultId(null)}>{t('Пересдать тест')}</Button>
+            : <Button big icon="home" onClick={() => nav('/my')}>{t('На главную')}</Button>}
+          <Button big variant="secondary" icon="award" onClick={() => nav('/results')}>{t('Мои результаты')}</Button>
+        </div>
+        {!online && pending > 0 && (
+          <div className="mb-5 space-y-3">
+            <Banner kind="offline">{t('Нет интернета — результат отправится сам, когда появится связь. Если связи не будет долго, передайте результаты мастеру.')}</Banner>
+            <Button variant="secondary" icon="send" className="w-full" onClick={() => nav('/qr-transfer')}>{t('Передать результаты мастеру')}</Button>
+          </div>
+        )}
+        {review.length > 0 && <div className="mb-4"><Banner kind="warn">{t('Ответов ждут проверки методиста')}: {review.length}</Banner></div>}
         {wrong.length > 0 && (
-          <Card className="p-4 mb-4">
-            <div className="font-bold mb-2">{t('Вопросы с ошибками')}</div>
+          <Card className="p-4">
+            <h2 className="text-lg font-bold mb-3">{t('Где были ошибки')}</h2>
             <ul className="space-y-3">
               {wrong.map((r) => {
                 const q = test.questions.find((x) => x.id === r.question_id)!;
                 return (
-                  <li key={r.question_id} className="border-l-4 border-red-300 pl-3">
-                    <div className="font-medium">{q.body}</div>
-                    {r.points > 0 && <div className="text-sm text-slate-500">{t('Частично')}: {Math.round(r.points * 100) / 100} / {q.points}</div>}
-                    {showExpl && q.explanation && <div className="text-sm text-slate-700 mt-1">💡 {q.explanation}</div>}
+                  <li key={r.question_id} className="border-l-4 border-red-400 pl-3">
+                    <div className="font-semibold">{q.body}</div>
+                    {r.points > 0 && <div className="text-slate-600">{t('Частично верно')}: {Math.round(r.points * 100) / 100} / {q.points}</div>}
+                    {showExpl && q.explanation && <div className="text-slate-700 mt-1">💡 {q.explanation}</div>}
                   </li>
                 );
               })}
             </ul>
-            {!showExpl && <div className="text-sm text-slate-500 mt-3">{t('Правильные ответы не показываются, пока остаются попытки.')}</div>}
+            {!showExpl && <div className="text-slate-600 mt-3">{t('Правильные ответы покажем, когда закончатся попытки.')}</div>}
           </Card>
         )}
-        <QrTransferButton className="mb-3" />
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button big onClick={() => nav(`/course/${courseId}`)}>{t('К курсу')}</Button>
-          <Button big variant="secondary" onClick={() => nav('/results')}>{t('Мои результаты')}</Button>
-        </div>
       </div>
     );
   }
@@ -147,18 +166,18 @@ export default function TestPlayer() {
       });
     };
     return (
-      <div className="max-w-2xl">
-        <button className="text-brand-700 font-medium mb-2 min-h-tap flex items-center" onClick={() => nav(`/course/${courseId}`)}><Icon name="left" />{t('К курсу')}</button>
-        <PageTitle>{test.title}</PageTitle>
+      <div className="max-w-2xl mx-auto">
+        <BackLink to={`/course/${courseId}`}>{t('К курсу')}</BackLink>
+        <h1 className="text-[1.6rem] font-bold mb-4">{test.title}</h1>
         <Card className="p-5 mb-4">
           <ul className="space-y-3 text-lg">
-            <li>📝 {t('Вопросов')}: <b>{test.questions.length}</b></li>
-            <li>⏱️ {t('Время')}: <b>{test.time_limit_min ? `${test.time_limit_min} ${t('мин')}` : t('не ограничено')}</b></li>
-            <li>🎯 {t('Проходной балл')}: <b>{passScore}%</b></li>
-            <li>🔁 {t('Попытка')}: <b>{Math.min(used + 1, test.max_attempts)} {t('из')} {test.max_attempts}</b></li>
+            <li className="flex items-center gap-3"><Icon name="tasks" className="text-brand-700" />{t('Вопросов')}: <b>{test.questions.length}</b></li>
+            <li className="flex items-center gap-3"><Icon name="clock" className="text-brand-700" />{t('Время')}: <b>{test.time_limit_min ? `${test.time_limit_min} ${t('мин')}` : t('не ограничено')}</b></li>
+            <li className="flex items-center gap-3"><Icon name="award" className="text-brand-700" />{t('Чтобы сдать, нужно')}: <b>{passScore}%</b></li>
+            <li className="flex items-center gap-3"><Icon name="refresh" className="text-brand-700" />{t('Осталось попыток')}: <b>{Math.max(0, left)}</b></li>
           </ul>
-          <div className="text-slate-500 mt-4">{t('Тест можно пройти без сети. Ответы сохраняются после каждого вопроса.')}</div>
         </Card>
+        <div className="mb-5"><Banner kind="info">{t('Можно сдавать без интернета. Каждый ответ сразу сохраняется — если телефон погаснет, продолжите с того же места.')}</Banner></div>
         <Button big icon="play" disabled={left <= 0} onClick={() => void start()}>{left <= 0 ? t('Попытки закончились') : t('Начать тест')}</Button>
       </div>
     );
@@ -174,37 +193,57 @@ export default function TestPlayer() {
     return !!a && ((a.selected_option_ids?.length ?? 0) > 0 || (a.order_option_ids?.length ?? 0) > 0 || !!a.answer_text?.trim());
   };
   const unanswered = order.filter((id) => !answered(id)).length;
+  const lastMinute = remaining != null && remaining < 60000;
 
   return (
-    <div className="max-w-2xl pb-bottom-bar">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-semibold text-slate-600">{t('Вопрос')} {idx + 1} {t('из')} {order.length}</span>
+    <div className="max-w-2xl mx-auto pb-bottom-bar">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
+        <span className="text-lg font-bold text-slate-900 whitespace-nowrap">{t('Вопрос {{k}} из {{n}}', { k: idx + 1, n: order.length })}</span>
         {remaining != null && (
-          <span className={`font-mono font-bold text-lg px-3 py-1 rounded-full ${remaining < 60000 ? 'bg-red-100 text-red-700' : 'bg-slate-100'}`}>
-            ⏱ {String(Math.floor(remaining / 60000)).padStart(2, '0')}:{String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0')}
+          <span className={`font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 whitespace-nowrap ${lastMinute ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'}`} data-testid="timer">
+            <Icon name="clock" size={18} />
+            {lastMinute
+              ? `${t('Осталось')} ${Math.ceil(remaining / 1000)} ${t('сек')}`
+              : `${t('Осталось')} ${Math.ceil(remaining / 60000)} ${t('мин')}`}
           </span>
         )}
       </div>
-      <ProgressBar value={(100 * (idx + 1)) / order.length} className="mb-3" />
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {order.map((id, i) => (
-          <button key={id} onClick={() => go(i)} className={`w-9 h-9 rounded-lg text-sm font-bold ${i === idx ? 'bg-brand-600 text-white' : answered(id) ? 'bg-brand-100 text-brand-800' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</button>
-        ))}
-      </div>
+      <ProgressBar value={(100 * (idx + 1)) / order.length} className="mb-4" label={t('Прогресс теста')} />
       <Card className="p-5"><QuestionRenderer key={q.id} q={q} answer={current.answers[q.id]} onChange={setAnswer} /></Card>
-      <div className="bottom-bar bg-white/95 border-t flex gap-2">
-        <Button variant="secondary" icon="left" disabled={idx === 0} onClick={() => go(idx - 1)} className="flex-1">{t('Назад')}</Button>
+
+      <details className="mt-4">
+        <summary className="min-h-tap flex items-center gap-2 text-brand-700 font-semibold cursor-pointer select-none">
+          <Icon name="menu" size={20} />{t('Все вопросы')}{unanswered ? ` · ${t('без ответа')}: ${unanswered}` : ''}
+        </summary>
+        <div className="flex flex-wrap gap-3 mt-2">
+          {order.map((id, i) => (
+            <button key={id} onClick={() => go(i)} aria-label={`${t('Вопрос')} ${i + 1}`}
+              className={`w-12 h-12 rounded-xl font-bold ${i === idx ? 'bg-brand-600 text-white' : answered(id) ? 'bg-brand-100 text-brand-800' : 'bg-white border-2 border-slate-300 text-slate-700'}`}>
+              {i + 1}
+            </button>
+          ))}
+        </div>
+      </details>
+
+      <div className="bottom-bar bg-white/95 border-t border-slate-200 flex gap-3">
+        <Button variant="secondary" icon="left" disabled={idx === 0} onClick={() => go(idx - 1)} className="flex-1 min-h-big">{t('Назад')}</Button>
         {idx < order.length - 1 ? (
-          <Button onClick={() => go(idx + 1)} className="flex-1">{t('Далее')}<Icon name="right" /></Button>
+          <Button onClick={() => go(idx + 1)} className="flex-1 min-h-big">{t('Далее')}<Icon name="right" /></Button>
         ) : (
-          <Button variant="success" icon="check" className="flex-1"
-            onClick={() => {
-              if (!unanswered || window.confirm(t('Без ответа вопросов: {{n}}. Завершить тест?', { n: unanswered }))) void finish(current);
-            }}>
-            {t('Завершить')}
-          </Button>
+          <Button variant="success" icon="check" className="flex-1 min-h-big" onClick={() => setConfirm(true)}>{t('Завершить тест')}</Button>
         )}
       </div>
+      <ConfirmModal
+        open={confirm}
+        title={t('Завершить тест?')}
+        confirmText={t('Завершить')}
+        cancelText={t('Вернуться к вопросам')}
+        onConfirm={() => { setConfirm(false); void finish(current); }}
+        onCancel={() => setConfirm(false)}
+      >
+        {t('Изменить ответы будет нельзя.')}
+        {unanswered > 0 && <div className="mt-2 font-semibold text-amber-800">{t('Без ответа вопросов: {{n}}', { n: unanswered })}</div>}
+      </ConfirmModal>
     </div>
   );
 }

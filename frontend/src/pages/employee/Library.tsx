@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { api, apiBlob, errorText } from '../../api/client';
 import { Icon } from '../../components/Icon';
 import { PdfViewer } from '../../components/PdfViewer';
-import { Alert, Badge, Button, Card, Empty, inputCls, Modal, PageTitle, Spinner, useOnline } from '../../components/ui';
+import { Alert, Badge, Button, Card, Empty, inputCls, Modal, PageTitle, Spinner, StatusBadge, useOnline } from '../../components/ui';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { db, getMeta, setMeta } from '../../offline/db';
 import type { Category, LibraryItem } from '../../types';
@@ -77,7 +77,7 @@ export default function Library() {
       const blob = f?.blob || (await apiBlob(`/api/files/${it.file.id}/offline`));
       setOpen({ item: it, blob });
     } catch (e) {
-      setErr(online ? errorText(e) : t('Документ не сохранён на устройстве'));
+      setErr(online ? errorText(e) : t('Документ не сохранён на телефоне. Подключитесь к интернету.'));
     } finally {
       setBusy('');
     }
@@ -85,13 +85,13 @@ export default function Library() {
 
   return (
     <div>
-      <PageTitle sub={online ? undefined : t('Офлайн-поиск по сохранённому индексу')}>{t('Библиотека')}</PageTitle>
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+      <PageTitle sub={online ? t('Инструкции, СОП и памятки') : t('Нет интернета — ищем среди сохранённых на телефоне')}>{t('Документы')}</PageTitle>
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
-          <Icon name="search" className="absolute left-3 top-3 text-slate-400" />
-          <input className={`${inputCls} pl-10`} placeholder={t('Поиск: огнетушитель, GMP, ожог…')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <input className={`${inputCls} pl-12`} aria-label={t('Поиск документов')} placeholder={t('Поиск: огнетушитель, GMP, ожог…')} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className={`${inputCls} sm:w-64`} value={cat} onChange={(e) => setCat(e.target.value)}>
+        <select className={`${inputCls} sm:w-64`} aria-label={t('Категория')} value={cat} onChange={(e) => setCat(e.target.value)}>
           <option value="">{t('Все категории')}</option>
           {cats.filter((c) => !c.parent_id).map((c) => (
             <optgroup key={c.id} label={c.name}>
@@ -102,12 +102,12 @@ export default function Library() {
         </select>
       </div>
       {err && <div className="mb-3"><Alert kind="error">{err}</Alert></div>}
-      {items === null ? <Spinner /> : !shown.length ? <Empty icon="library">{t('Ничего не найдено')}</Empty> : (
+      {items === null ? <Spinner /> : !shown.length ? <Empty icon="docs">{t('Ничего не нашли. Попробуйте другое слово.')}</Empty> : (
         <div className="grid gap-3 sm:grid-cols-2">
           {shown.map((it) => (
             <Card key={it.id} className="p-4 flex flex-col gap-2">
               <div className="font-semibold">{it.title}</div>
-              <div className="text-sm text-slate-500">{it.description}</div>
+              <div className="text-slate-600">{it.description}</div>
               <div className="flex flex-wrap gap-1">
                 {cats.find((c) => c.id === it.category_id) && <Badge color="blue">{cats.find((c) => c.id === it.category_id)!.name}</Badge>}
                 {it.tags.map((tg) => <Badge key={tg}>#{tg}</Badge>)}
@@ -115,8 +115,8 @@ export default function Library() {
               <div className="flex flex-wrap gap-2 mt-auto pt-1">
                 <Button icon="file" onClick={() => void view(it)} disabled={busy === it.id}>{t('Открыть')}</Button>
                 {it.allow_offline && it.file && (savedFiles.has(it.id)
-                  ? <Badge color="teal"><Icon name="check" size={14} />{t('Сохранено офлайн')}</Badge>
-                  : <Button variant="secondary" icon="download" disabled={!online || busy === it.id} onClick={() => void save(it)}>{t('Сохранить офлайн')}</Button>)}
+                  ? <StatusBadge status="saved" />
+                  : <Button variant="secondary" icon="download" disabled={!online || busy === it.id} onClick={() => void save(it)}>{t('Сохранить на телефон')}</Button>)}
               </div>
             </Card>
           ))}

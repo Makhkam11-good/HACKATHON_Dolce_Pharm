@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { authToken } from '../offline/session';
 
 export class ApiError extends Error {
@@ -8,7 +9,7 @@ export class ApiError extends Error {
 
 export class NetworkError extends Error {
   constructor() {
-    super('Нет связи с сервером');
+    super('Нет интернета. Ничего страшного — всё сохранено, попробуйте позже.');
   }
 }
 
@@ -85,8 +86,8 @@ export async function download(path: string, filename: string) {
   saveBlob(await apiBlob(path), filename);
 }
 
+/** Текст ошибки для человека (переводится: ключи — русские сообщения сервера и клиента). */
 export function errorText(e: unknown): string {
-  if (e instanceof ApiError || e instanceof NetworkError) return e.message;
-  if (e instanceof Error) return e.message;
-  return String(e);
+  const msg = e instanceof Error ? e.message : String(e);
+  return i18n.t(msg);
 }
