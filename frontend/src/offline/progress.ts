@@ -12,6 +12,23 @@ export function materialStudied(m: PkgMaterial, p: ProgressRec | undefined): boo
   return p.seconds >= (m.min_seconds || 0);
 }
 
+/**
+ * Внешние ссылки справочные и без сети не открываются, поэтому в прогресс и в условие допуска к тесту
+ * не входят — иначе курс со ссылкой нельзя пройти в авиарежиме.
+ */
+export function materialRequired(m: PkgMaterial): boolean {
+  return m.type !== 'link';
+}
+
+export function studyProgress(mats: PkgMaterial[], byMat: Map<string, ProgressRec>) {
+  const required = mats.filter(materialRequired);
+  const done = required.filter((m) => materialStudied(m, byMat.get(m.id))).length;
+  return {
+    percent: required.length ? Math.round((100 * done) / required.length) : mats.length ? 100 : 0,
+    allStudied: mats.length > 0 && done === required.length,
+  };
+}
+
 export interface MergedAttempt {
   id: string;
   testId: string;
@@ -75,8 +92,7 @@ export function useCourseProgress(userId: string | undefined, pkg: CoursePackage
   return {
     byMat,
     studiedIds: new Set(studied.map((m) => m.id)),
-    percent: mats.length ? Math.round((100 * studied.length) / mats.length) : 0,
-    allStudied: mats.length > 0 && studied.length === mats.length,
+    ...studyProgress(mats, byMat),
     anyProgress: (recs || []).length > 0,
     totalSeconds: (recs || []).reduce((s, r) => s + r.seconds, 0),
   };

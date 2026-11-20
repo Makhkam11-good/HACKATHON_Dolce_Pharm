@@ -59,7 +59,7 @@ export default function CourseView() {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold">{i + 1}. {mat.title}</div>
                   <div className="text-sm text-slate-500">
-                    {mat.type === 'link' ? t('Требует сети') : mat.min_seconds ? `${t('Минимум')} ${fmtDuration(mat.min_seconds)} · ${t('изучено')} ${fmtDuration(Math.min(sec, mat.min_seconds))}` : done ? t('Изучено') : t('Откройте материал')}
+                    {mat.type === 'link' ? t('Справочно · не обязательно · требует сети') : mat.min_seconds ? `${t('Минимум')} ${fmtDuration(mat.min_seconds)} · ${t('изучено')} ${fmtDuration(Math.min(sec, mat.min_seconds))}` : done ? t('Изучено') : t('Откройте материал')}
                   </div>
                 </div>
                 <Icon name="right" className="text-slate-400" />

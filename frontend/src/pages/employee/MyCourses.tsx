@@ -8,7 +8,7 @@ import { Icon } from '../../components/Icon';
 import { Alert, Badge, Button, Card, Empty, fmtBytes, fmtDate, PageTitle, ProgressBar, Spinner, useOnline } from '../../components/ui';
 import { db, type CourseRec } from '../../offline/db';
 import { downloadCourse, type Progress } from '../../offline/downloader';
-import { courseStatus, materialStudied, STATUS_COLOR, STATUS_LABEL, useAttempts, useSyncState, type MergedAttempt } from '../../offline/progress';
+import { courseStatus, STATUS_COLOR, STATUS_LABEL, studyProgress, useAttempts, useSyncState, type MergedAttempt } from '../../offline/progress';
 import { pullState } from '../../offline/syncEngine';
 import type { AssignmentState } from '../../types';
 
@@ -61,8 +61,7 @@ function CourseCard({ a, rec, attempts, userId }: { a: AssignmentState; rec?: Co
   let percent = 0;
   if (rec) {
     const by = new Map((recs || []).map((r) => [r.materialId, r]));
-    const mats = rec.manifest.materials;
-    percent = mats.length ? Math.round((100 * mats.filter((m) => materialStudied(m, by.get(m.id))).length) / mats.length) : 0;
+    percent = studyProgress(rec.manifest.materials, by).percent;
   } else if (a.materials_count) {
     percent = Math.round((100 * Math.min(a.materials_count, (recs || []).filter((r) => r.opened).length)) / a.materials_count);
   }

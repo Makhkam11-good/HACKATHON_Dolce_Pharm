@@ -194,6 +194,11 @@ export function openMaterial(courseId: string, materialId: string) {
   startInterval();
 }
 
+/** Отметить материал открытым без учёта времени (внешняя ссылка: время в браузере не измерить). */
+export function markMaterialOpened(courseId: string, materialId: string) {
+  void addProgress(courseId, materialId, 0, true);
+}
+
 export function closeMaterial() {
   target = null;
   void closeInterval();

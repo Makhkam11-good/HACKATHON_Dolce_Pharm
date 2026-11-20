@@ -10,7 +10,7 @@ import { Alert, Button, fmtDuration, Spinner, useOnline } from '../../components
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { getFileBlob } from '../../offline/downloader';
 import { useCourseProgress } from '../../offline/progress';
-import { closeMaterial, liveSeconds, openMaterial, subscribeTracker } from '../../offline/timeTracker';
+import { closeMaterial, liveSeconds, markMaterialOpened, openMaterial, subscribeTracker } from '../../offline/timeTracker';
 import { useManifest } from './CourseView';
 
 export default function MaterialView() {
@@ -76,9 +76,9 @@ export default function MaterialView() {
       {mat.type === 'text' && <div className="bg-white rounded-2xl border p-5"><MarkdownBlock text={mat.body_md || ''} /></div>}
       {mat.type === 'link' && (
         <div className="bg-white rounded-2xl border p-5 space-y-3">
-          <Alert kind={online ? 'info' : 'warn'}>{t('Внешняя ссылка — требует сети. Время по ссылке не учитывается.')}</Alert>
+          <Alert kind={online ? 'info' : 'warn'}>{t('Внешняя ссылка — требует сети. Это справочный материал: он не обязателен для допуска к тесту, время по ссылке не учитывается.')}</Alert>
           <div className="font-mono break-all text-slate-700">{mat.url}</div>
-          <a href={mat.url} target="_blank" rel="noreferrer noopener"><Button icon="link" disabled={!online}>{t('Открыть в браузере')}</Button></a>
+          <a href={mat.url} target="_blank" rel="noreferrer noopener" onClick={() => online && courseId && markMaterialOpened(courseId, mat.id)}><Button icon="link" disabled={!online}>{t('Открыть в браузере')}</Button></a>
         </div>
       )}
       {mat.file && (
