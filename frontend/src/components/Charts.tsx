@@ -2,8 +2,12 @@ import { BarController, BarElement, CategoryScale, Chart, Filler, Legend, Linear
 import { useEffect, useRef } from 'react';
 
 Chart.register(RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend, BarController, BarElement, CategoryScale, LinearScale);
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.font.size = 14;
+Chart.defaults.color = '#3B3543';
 
-export interface Series { label: string; data: (number | null)[]; color: string }
+/** dash и point — чтобы серии различались не только цветом (линия: сплошная / штрих / точки, точки: круг / квадрат / треугольник). */
+export interface Series { label: string; data: (number | null)[]; color: string; dash?: number[]; point?: 'circle' | 'rect' | 'triangle' }
 
 function useChart(cfg: () => ConstructorParameters<typeof Chart>[1], deps: unknown[]) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -21,12 +25,12 @@ export function RadarChart({ labels, series }: { labels: string[]; series: Serie
     type: 'radar',
     data: {
       labels,
-      datasets: series.map((s) => ({ label: s.label, data: s.data, borderColor: s.color, backgroundColor: `${s.color}22`, pointBackgroundColor: s.color, borderWidth: 2, spanGaps: true })),
+      datasets: series.map((s) => ({ label: s.label, data: s.data, borderColor: s.color, backgroundColor: `${s.color}1A`, pointBackgroundColor: s.color, borderWidth: 3, borderDash: s.dash, pointStyle: s.point || 'circle', pointRadius: 5, spanGaps: true })),
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, backdropColor: 'transparent' }, pointLabels: { font: { size: 12 } } } },
-      plugins: { legend: { position: 'bottom' } },
+      scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, backdropColor: 'transparent' }, pointLabels: { font: { size: 13, weight: 600 } } } },
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16 } } },
     },
   }), [JSON.stringify(labels), JSON.stringify(series)]);
   return <div className="h-[380px]"><canvas ref={ref} /></div>;

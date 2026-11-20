@@ -53,7 +53,7 @@ export default function QrReceive() {
       setResult(r);
       setAckUrl(await QRCode.toDataURL(r.ack, { errorCorrectionLevel: 'M', margin: 4, width: 420 }));
     } catch (e) {
-      setErr(e instanceof ApiError && e.code === 'bad_signature' ? t('Подпись не совпала — пакет изменён или подделан. Данные не приняты.') : errorText(e));
+      setErr(e instanceof ApiError && e.code === 'bad_signature' ? t('Подпись не совпала: данные изменены или подделаны. Ничего не принято.') : errorText(e));
     } finally {
       setSending(false);
     }
@@ -65,7 +65,7 @@ export default function QrReceive() {
     const r = a.add(text);
     if (r.status === 'ignored') return false;
     if (r.status !== 'duplicate') {
-      if (r.droppedPrevious) setWarn(t('Начат новый пакет — предыдущая незавершённая сборка сброшена'));
+      if (r.droppedPrevious) setWarn(t('Сотрудник показал новые коды — собираем заново'));
       force((x) => x + 1);
       if (r.status === 'complete') void send(r.batchId, r.full);
     }
@@ -112,10 +112,10 @@ export default function QrReceive() {
   return (
     <div className="max-w-5xl">
       <PageTitle
-        sub={t('Оператор открывает на телефоне «Передать мастеру без сети» и показывает QR-коды камере этого компьютера')}
+        sub={t('Сотрудник открывает на телефоне «Передать результаты мастеру» и показывает коды камере этого компьютера')}
         actions={<Button variant="secondary" icon="refresh" onClick={reset}>{t('Новый приём')}</Button>}
       >
-        {t('Принять по QR')}
+        {t('Принять результаты сотрудников')}
       </PageTitle>
       {warn && <div className="mb-3"><Alert kind="warn">{warn}</Alert></div>}
       <div className="grid lg:grid-cols-2 gap-4">
@@ -125,23 +125,23 @@ export default function QrReceive() {
             <div className="font-semibold">{t('Если камера не работает')}</div>
             <div>
               <input ref={fileInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => void onFiles(e.target.files)} />
-              <Button variant="secondary" icon="image" disabled={!!result} onClick={() => fileInput.current?.click()}>{t('Загрузить фото/скриншот QR')}</Button>
-              <div className="text-xs text-slate-500 mt-1">{t('Можно выбрать сразу несколько снимков — по одному на каждый код карусели.')}</div>
+              <Button variant="secondary" icon="image" disabled={!!result} onClick={() => fileInput.current?.click()}>{t('Загрузить фото кодов')}</Button>
+              <div className="text-[0.9rem] text-slate-600 mt-1">{t('Можно выбрать сразу несколько снимков — по одному на каждый код карусели.')}</div>
             </div>
             <div>
-              <label className="text-sm font-medium" htmlFor="qr-manual">{t('Вставить код вручную')}</label>
-              <textarea id="qr-manual" className={`${inputCls} mt-1 font-mono text-xs`} rows={3} value={manual} onChange={(e) => setManual(e.target.value)} placeholder="DPQR1|…" />
+              <label className="font-semibold" htmlFor="qr-manual">{t('Вставить код вручную')}</label>
+              <textarea id="qr-manual" className={`${inputCls} mt-1 font-mono text-sm`} rows={3} value={manual} onChange={(e) => setManual(e.target.value)} placeholder="DPQR1|…" />
               <Button variant="secondary" className="mt-2" disabled={!manual.trim() || !!result} onClick={onManual}>{t('Добавить')}</Button>
-              <div className="text-xs text-slate-500 mt-1">{t('На телефоне оператора: «Скопировать код» рядом с каруселью.')}</div>
+              <div className="text-[0.9rem] text-slate-600 mt-1">{t('На телефоне оператора: «Скопировать код» рядом с каруселью.')}</div>
             </div>
-            {info && <div className="text-sm text-slate-600">{info}</div>}
+            {info && <div className="text-slate-700">{info}</div>}
           </Card>
         </div>
         <Card className="p-4 self-start">
           {!a.batchId ? <div className="text-slate-500 text-lg">{t('Ожидание первого кода…')}</div> : (
             <>
               <div className="text-xl font-bold mb-2">{t('Собрано')} {a.got} {t('из')} {n}</div>
-              <div className="text-sm text-slate-500 mb-3">{t('Пакет')} <span className="font-mono">{a.batchId}</span></div>
+              <div className="text-slate-600 mb-3">{t('Держите телефон перед камерой, пока все клетки не станут зелёными')}</div>
               <div className="grid gap-1.5 mb-4" style={{ gridTemplateColumns: `repeat(${Math.min(n, 8)}, minmax(0, 1fr))` }}>
                 {Array.from({ length: n }, (_, i) => (
                   <div key={i} data-chunk={i + 1} className={`h-10 rounded-lg flex items-center justify-center font-bold ${a.has(i + 1) ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>{i + 1}</div>
@@ -149,21 +149,21 @@ export default function QrReceive() {
               </div>
             </>
           )}
-          {sending && <Alert kind="info">{t('Отправка на сервер…')}</Alert>}
+          {sending && <Alert kind="info">{t('Отправляем…')}</Alert>}
           {err && <Alert kind="error">{err}</Alert>}
           {result && (
             <div className="space-y-3">
               <Alert kind="success">
-                <div className="font-bold text-lg">{result.already_received ? t('Пакет уже был принят ранее') : t('Принято')}: {result.stats?.events ?? 0} {t('событий')}, {result.stats?.attempts ?? 0} {t('попыток теста')}</div>
-                {result.attempts.map((x, i) => <div key={i}>{shortName(x.user_name)} — {x.course_title} — {t(ST[x.status] || x.status)}, {x.score}%{x.certificate_number ? ` · ${x.certificate_number}` : ''}</div>)}
-                {result.duplicates_count > 0 && <div className="text-sm">{t('Дубли (уже были на сервере)')}: {result.duplicates_count}</div>}
+                <div className="font-bold text-xl">{result.already_received ? t('Эти результаты уже были приняты раньше') : `${t('Принято')}: ${result.user_name}`}</div>
+                {result.attempts.map((x, i) => <div key={i} className="text-lg">{shortName(x.user_name)} — {x.course_title} — <b>{t(ST[x.status] || x.status)}, {x.score}%</b>{x.certificate_number ? ` · ${t('сертификат')} ${x.certificate_number}` : ''}</div>)}
+                <div>{t('Записей о времени обучения')}: {result.stats?.events ?? 0}{result.duplicates_count > 0 ? ` · ${t('повторы пропущены')}: ${result.duplicates_count}` : ''}</div>
               </Alert>
-              {result.rejected?.length > 0 && <Alert kind="warn">{t('Отклонено')}: {result.rejected.map((r) => r.reason).join(', ')}</Alert>}
+              {result.rejected?.length > 0 && <Alert kind="warn">{t('Не принято записей')}: {result.rejected.length}</Alert>}
               {ackUrl && (
                 <div className="text-center border rounded-2xl p-3">
                   <div className="font-semibold mb-1">{t('Подтверждение для телефона (необязательно)')}</div>
                   <img src={ackUrl} alt="ACK" className="mx-auto w-64" />
-                  <div className="text-xs text-slate-500">{t('Оператор: «Сканировать подтверждение мастера»')}</div>
+                  <div className="text-slate-600">{t('Сотрудник: «Сканировать подтверждение мастера»')}</div>
                 </div>
               )}
             </div>

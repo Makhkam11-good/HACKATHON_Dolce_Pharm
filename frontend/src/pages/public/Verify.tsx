@@ -41,7 +41,7 @@ export default function Verify() {
           </>
         )}
       </div>
-      <p className="text-xs text-slate-500 mt-4 text-center">{t(DEMO_NOTE)}</p>
+      <p className="text-[0.85rem] text-slate-500 mt-4 text-center">{t(DEMO_NOTE)}</p>
     </div>
   );
 }

@@ -62,7 +62,7 @@ export default function MLibrary() {
                 <Badge color="blue">{cats.find((c) => c.id === i.category_id)?.name || t('без категории')}</Badge>
                 {i.file && <Badge color={i.file.conversion_status === 'ready' ? 'green' : i.file.conversion_status === 'failed' ? 'red' : 'amber'}>{i.file.original_name}</Badge>}
                 {i.tags.map((tg) => <Badge key={tg}>#{tg}</Badge>)}
-                {!i.allow_offline && <Badge color="amber">{t('только онлайн')}</Badge>}
+                {!i.allow_offline && <Badge color="amber">{t('только через интернет')}</Badge>}
               </div>
             </Card>
           ))}
@@ -112,7 +112,7 @@ function EditItem({ item, cats, onClose, onDone }: { item: Partial<LibraryItem>;
         </select>
       </Field>
       <Field label={t('Теги через запятую')}><input className={inputCls} value={f.tags} onChange={(e) => setF({ ...f, tags: e.target.value })} /></Field>
-      <label className="flex items-center gap-2 min-h-tap mb-3"><input type="checkbox" className="w-6 h-6" checked={f.allow_offline} onChange={(e) => setF({ ...f, allow_offline: e.target.checked })} />{t('Разрешить сохранять офлайн')}</label>
+      <label className="flex items-center gap-2 min-h-tap mb-3"><input type="checkbox" className="w-6 h-6" checked={f.allow_offline} onChange={(e) => setF({ ...f, allow_offline: e.target.checked })} />{t('Разрешить сохранять на телефон')}</label>
       <input ref={input} type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.mp4,.mov,.webm" />
       <Button variant="secondary" icon="upload" onClick={() => input.current?.click()} className="mb-3 w-full">{file ? file.name : item.file ? `${t('Заменить файл')} (${item.file.original_name})` : t('Выбрать файл')}</Button>
       <LargeUploadHint file={file} />

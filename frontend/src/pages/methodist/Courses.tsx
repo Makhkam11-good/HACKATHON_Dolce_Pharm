@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { api, errorText } from '../../api/client';
-import { Alert, Badge, Button, Card, Empty, Field, inputCls, Modal, PageTitle, Spinner } from '../../components/ui';
+import { Alert, Badge, Button, Card, EmptyState, Field, inputCls, Modal, PageTitle, Spinner } from '../../components/ui';
 import type { Category } from '../../types';
 
 export interface CourseRow {
@@ -42,7 +42,7 @@ export default function Courses() {
 
   return (
     <div>
-      <PageTitle actions={<Button icon="plus" onClick={() => setCreate(true)}>{t('Новый курс')}</Button>}>{t('Курсы')}</PageTitle>
+      <PageTitle sub={t('Создайте курс, добавьте материалы и тест, затем назначьте сотрудникам')} actions={<Button icon="plus" onClick={() => setCreate(true)}>{t('Создать курс')}</Button>}>{t('Курсы')}</PageTitle>
       <div className="flex flex-wrap gap-2 mb-4">
         <select className={`${inputCls} w-auto`} value={cat} onChange={(e) => setCat(e.target.value)}>
           <option value="">{t('Все категории')}</option>
@@ -54,26 +54,26 @@ export default function Courses() {
           <option value="draft">{t('Черновик')}</option>
         </select>
       </div>
-      {!rows ? <Spinner /> : !rows.length ? <Empty>{t('Курсов пока нет')}</Empty> : (
+      {!rows ? <Spinner /> : !rows.length ? <EmptyState icon="book" title={t('Курсов пока нет')} action={<Button icon="plus" onClick={() => setCreate(true)}>{t('Создать курс')}</Button>}>{t('Нажмите «Создать курс», чтобы начать.')}</EmptyState> : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((c) => (
             <Card key={c.id} className="overflow-hidden" onClick={() => nav(`/m/courses/${c.id}`)}>
               <div className="h-2" style={{ background: c.cover_color }} />
               <div className="p-4">
-                <div className="font-bold mb-2">{c.title}</div>
-                <div className="flex flex-wrap gap-1.5 text-sm">
+                <div className="font-bold text-lg mb-2 leading-snug">{c.title}</div>
+                <div className="flex flex-wrap gap-1.5">
                   <Badge color={c.status === 'published' ? 'green' : 'slate'}>{c.status === 'published' ? t('Опубликован') : t('Черновик')}</Badge>
-                  <Badge>v{c.version}</Badge>
-                  <Badge color="blue">{c.materials_count} {t('матер.')}</Badge>
-                  <Badge color="teal">{c.questions_count} {t('вопр.')}</Badge>
-                  <Badge>{c.assigned_count} {t('назнач.')}</Badge>
+                  <Badge>{t('Версия')} {c.version}</Badge>
+                  <Badge color="blue">{t('Материалов')}: {c.materials_count}</Badge>
+                  <Badge color="teal">{t('Вопросов')}: {c.questions_count}</Badge>
+                  <Badge>{t('Назначено')}: {c.assigned_count}</Badge>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
-      <Modal open={create} onClose={() => setCreate(false)} title={t('Новый курс')}>
+      <Modal open={create} onClose={() => setCreate(false)} title={t('Создать курс')}>
         <Field label={t('Название')}><input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
         <Field label={t('Описание')}><textarea className={inputCls} rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
         <Field label={t('Категория')}>
@@ -83,7 +83,7 @@ export default function Courses() {
           </select>
         </Field>
         {err && <div className="mb-3"><Alert kind="error">{err}</Alert></div>}
-        <Button big disabled={!form.title.trim()} onClick={() => void submit()}>{t('Создать')}</Button>
+        <Button big disabled={!form.title.trim()} onClick={() => void submit()}>{t('Создать и перейти к материалам')}</Button>
       </Modal>
     </div>
   );

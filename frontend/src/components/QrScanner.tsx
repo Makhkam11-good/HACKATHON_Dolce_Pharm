@@ -20,7 +20,7 @@ export function cameraErrorText(e: unknown, t: TFn): string {
     return t('Камера занята другим приложением (Zoom, Teams, OBS)');
   }
   if (name === 'CameraTimeout') {
-    return t('Камера не отвечает: Windows не отдаёт видео браузеру, поэтому окно «Разрешить» не появляется. Закройте программы, которые используют камеру (NVIDIA Broadcast, iVCam, OBS, Discord, Zoom), и перезапустите браузер. Если не помогло — перезагрузите компьютер. Пока можно принять коды через «Загрузить фото/скриншот QR».');
+    return t('Камера не отвечает: Windows не отдаёт видео браузеру, поэтому окно «Разрешить» не появляется. Закройте программы, которые используют камеру (NVIDIA Broadcast, iVCam, OBS, Discord, Zoom), и перезапустите браузер. Если не помогло — перезагрузите компьютер. Пока можно принять коды через «Загрузить фото кодов».');
   }
   return `${t('Не удалось включить камеру')}: ${(e as Error)?.message || String(e)}`;
 }
@@ -158,7 +158,7 @@ export function QrScanner({ onResult, active = true, autoStart = false, preferBa
             <Button big icon="camera" disabled={state === 'starting' || !active} onClick={() => void start(camId || undefined)}>
               {state === 'starting' ? t('Включаем камеру…') : t('Включить камеру')}
             </Button>
-            <div className="text-white/70 text-sm">{t('Браузер спросит разрешение на камеру — нажмите «Разрешить»')}</div>
+            <div className="text-white/90">{t('Браузер спросит разрешение на камеру — нажмите «Разрешить»')}</div>
           </div>
         )}
       </div>

@@ -92,8 +92,8 @@ export default function Assignments() {
               <label key={u.id} className="flex items-center gap-3 py-2 min-h-tap">
                 <input type="checkbox" className="w-5 h-5" checked={sel.has(u.id)} disabled={assigned.has(u.id)}
                   onChange={(e) => { const s = new Set(sel); if (e.target.checked) s.add(u.id); else s.delete(u.id); setSel(s); }} />
-                <span className="flex-1">{u.full_name}<span className="block text-xs text-slate-500">{u.position} · {u.department_name}</span></span>
-                {assigned.has(u.id) && <span className="text-xs text-emerald-700 font-semibold">{t('назначен')}</span>}
+                <span className="flex-1">{u.full_name}<span className="block text-[0.85rem] text-slate-500">{u.position} · {u.department_name}</span></span>
+                {assigned.has(u.id) && <span className="text-[0.85rem] text-emerald-700 font-semibold">{t('назначен')}</span>}
               </label>
             ))}
           </div>
@@ -104,7 +104,7 @@ export default function Assignments() {
             <div className="max-h-[460px] overflow-auto divide-y">
               {list.map((a) => (
                 <div key={a.id} className="flex items-center gap-2 py-2">
-                  <span className="flex-1">{a.full_name}<span className="block text-xs text-slate-500">{a.department_name}{a.due_date ? ` · ${t('до')} ${fmtDate(a.due_date, false)}` : ''}</span></span>
+                  <span className="flex-1">{a.full_name}<span className="block text-[0.85rem] text-slate-500">{a.department_name}{a.due_date ? ` · ${t('до')} ${fmtDate(a.due_date, false)}` : ''}</span></span>
                   <Button variant="ghost" icon="x" onClick={() => void api(`/api/assignments/${a.id}`, { method: 'DELETE' }).then(loadList)} />
                 </div>
               ))}

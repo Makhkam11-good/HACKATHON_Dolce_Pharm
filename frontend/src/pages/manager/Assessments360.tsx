@@ -1,9 +1,9 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, errorText } from '../../api/client';
 import { RadarChart } from '../../components/Charts';
 import { Icon } from '../../components/Icon';
-import { Alert, Badge, Button, Card, Empty, Field, inputCls, Modal, PageTitle, Spinner } from '../../components/ui';
+import { Alert, Badge, Button, Card, Empty, Field, inputCls, Modal, PageTitle, Spinner, useToast } from '../../components/ui';
 import type { User } from '../../types';
 
 interface Item { id: string; title: string; period: string; status: string; subject_name: string; raters_total: number; raters_done: number; kind: string }
@@ -93,18 +93,8 @@ export default function Assessments360() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
-  const [toast, setToast] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showToast = (kind: 'success' | 'error' | 'info', text: string) => {
-    setToast({ kind, text });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 5000);
-  };
-  const toastEl = toast && (
-    <div role="status" aria-live="polite" className="fixed z-50 left-1/2 -translate-x-1/2 w-[min(92vw,28rem)] shadow-lg" style={{ bottom: 'calc(var(--bottom-offset, 0px) + 1rem)' }}>
-      <Alert kind={toast.kind}>{toast.text}</Alert>
-    </div>
-  );
+  const showToast = useToast();
+
   const load = () => void api<Item[]>('/api/assessments').then(setList);
   useEffect(load, []);
   const open = (id: string) => void api<Profile>(`/api/assessments/${id}/profile`).then(setProfile);
@@ -126,9 +116,9 @@ export default function Assessments360() {
           <Card className="p-4">
             <div className="font-bold mb-2">{t('Роза компетенций')}</div>
             <RadarChart labels={p.rows.map((r) => r.name)} series={[
-              { label: t('Самооценка'), data: p.rows.map((r) => r.self), color: '#2a7ab0' },
-              { label: t('Руководитель'), data: p.rows.map((r) => r.manager), color: '#b5562a' },
-              ...(p.kind === '360' ? [{ label: t('Коллеги'), data: p.rows.map((r) => r.peers), color: '#1f6f5c' }] : []),
+              { label: t('Самооценка'), data: p.rows.map((r) => r.self), color: '#4F007D', point: 'circle' },
+              { label: t('Руководитель'), data: p.rows.map((r) => r.manager), color: '#E56D6D', dash: [8, 5], point: 'rect' },
+              ...(p.kind === '360' ? [{ label: t('Коллеги'), data: p.rows.map((r) => r.peers), color: '#6839CC', dash: [2, 4], point: 'triangle' as const }] : []),
             ]} />
           </Card>
           <Card className="p-4 overflow-auto">
@@ -143,7 +133,7 @@ export default function Assessments360() {
                 </tr>
               ))}</tbody>
             </table>
-            <div className="text-xs text-slate-500 mt-2">{t('Подсвечены разрывы ≥ 1 балла; красным — средняя оценка других ниже 3.')}</div>
+            <div className="text-[0.85rem] text-slate-500 mt-2">{t('Подсвечены разрывы ≥ 1 балла; красным — средняя оценка других ниже 3.')}</div>
           </Card>
         </div>
         <Card className="p-4 mt-4">
@@ -154,7 +144,6 @@ export default function Assessments360() {
             ))}</ul>
           )}
         </Card>
-        {toastEl}
         {p.comments.length > 0 && (
           <Card className="p-4 mt-4">
             <div className="font-bold mb-2">{t('Комментарии')}</div>
@@ -215,7 +204,7 @@ function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (p: Pro
           <label key={u.id} className="flex items-center gap-2 p-2 min-h-tap">
             <input type="checkbox" className="w-5 h-5" checked={peers.includes(u.id)} disabled={!peers.includes(u.id) && peers.length >= 5}
               onChange={(e) => setPeers(e.target.checked ? [...peers, u.id] : peers.filter((x) => x !== u.id))} />
-            {u.full_name}<span className="text-xs text-slate-500">{u.position}</span>
+            {u.full_name}<span className="text-[0.85rem] text-slate-500">{u.position}</span>
           </label>
         ))}
       </div>

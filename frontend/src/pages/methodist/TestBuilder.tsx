@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
+import { CourseSteps } from './CourseSteps';
 import { api, errorText } from '../../api/client';
 import { Icon } from '../../components/Icon';
 import { QuestionRenderer } from '../../components/QuestionRenderer';
@@ -81,11 +82,12 @@ export default function TestBuilder() {
 
   return (
     <div className="max-w-4xl pb-10">
-      <Link to={`/m/courses/${courseId}`} className="text-brand-700 font-medium min-h-tap inline-flex items-center"><Icon name="left" />{course?.title}</Link>
+      <Link to={`/m/courses/${courseId}`} className="text-brand-700 font-semibold min-h-tap inline-flex items-center gap-1"><Icon name="left" />{course?.title}</Link>
       <PageTitle actions={<>
         <Button variant="secondary" icon={preview ? 'edit' : 'play'} onClick={() => setPreview(!preview)}>{preview ? t('Редактор') : t('Превью глазами сотрудника')}</Button>
         <Button icon="check" onClick={() => void save()}>{t('Сохранить тест')}</Button>
-      </>}>{t('Конструктор теста')}</PageTitle>
+      </>}>3. {t('Тест')}</PageTitle>
+      <CourseSteps courseId={courseId!} current={3} done={[1, 2]} />
       {msg && <div className="mb-3"><Alert kind={msg.kind}>{msg.text}</Alert></div>}
 
       {preview ? (

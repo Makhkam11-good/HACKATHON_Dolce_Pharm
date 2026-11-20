@@ -12,6 +12,7 @@ import { Alert, Badge, Button, Card, Field, fmtBytes, inputCls, Modal, PageTitle
 import { authToken } from '../../offline/session';
 import type { Category, Competency, FileInfo } from '../../types';
 import { MAT_ICON } from '../employee/CourseView';
+import { CourseSteps } from './CourseSteps';
 
 interface Material { id: string; position: number; type: string; title: string; file: FileInfo | null; url: string | null; body_md: string | null; min_seconds: number }
 interface Course { id: string; title: string; description: string; category_id: string | null; status: string; version: number; pass_score: number; cover_color: string; materials: Material[]; competency_ids: string[] }
@@ -97,7 +98,7 @@ function Row({ m, onEdit, onDelete, onRetry }: { m: Material; onEdit: () => void
           {st === 'ready' && m.type !== 'pdf' && m.file && <Badge color="green">{m.type === 'video' ? t('сжато до 720p') : t('PDF готов')}</Badge>}
           {st === 'failed' && <Badge color="red">{t('ошибка конвертации')}</Badge>}
         </div>
-        {st === 'failed' && <div className="text-xs text-red-700 mt-1">{m.file?.conversion_error} <button className="underline font-semibold" onClick={onRetry}>{t('Повторить')}</button></div>}
+        {st === 'failed' && <div className="text-[0.85rem] text-red-700 mt-1">{m.file?.conversion_error} <button className="underline font-semibold" onClick={onRetry}>{t('Повторить')}</button></div>}
       </div>
       <button className="min-h-tap min-w-tap rounded-lg hover:bg-slate-100 flex items-center justify-center" onClick={onEdit} aria-label={t('Изменить')}><Icon name="edit" /></button>
       <button className="min-h-tap min-w-tap rounded-lg hover:bg-red-50 text-red-600 flex items-center justify-center" onClick={onDelete} aria-label={t('Удалить')}><Icon name="trash" /></button>
@@ -160,21 +161,21 @@ export default function CourseEditor() {
 
   return (
     <div className="max-w-4xl">
-      <Link to="/m/courses" className="text-brand-700 font-medium min-h-tap inline-flex items-center"><Icon name="left" />{t('Курсы')}</Link>
+      <Link to="/m/courses" className="text-brand-700 font-semibold min-h-tap inline-flex items-center gap-1"><Icon name="left" />{t('Курсы')}</Link>
       <PageTitle
         sub={<span className="flex gap-2 items-center"><Badge color={c.status === 'published' ? 'green' : 'slate'}>{c.status === 'published' ? t('Опубликован') : t('Черновик')}</Badge> v{c.version}</span>}
         actions={<>
-          <Button variant="secondary" icon="tasks" onClick={() => nav(`/m/courses/${c.id}/test`)}>{t('Тест')}</Button>
-          <Button variant="secondary" icon="users" onClick={() => nav(`/m/assignments?course=${c.id}`)}>{t('Назначить')}</Button>
           {c.status === 'published' && <Button variant="ghost" onClick={() => void action('unpublish', t('Снято с публикации'))}>{t('Снять с публикации')}</Button>}
-          <Button icon="upload" onClick={() => void action('publish', t('Опубликовано. Сотрудники получат обновление при синхронизации.'))}>
+          <Button icon="upload" onClick={() => void action('publish', t('Опубликовано. Сотрудники увидят курс, когда их телефон подключится к интернету.'))}>
             {c.status === 'published' ? t('Опубликовать новую версию') : t('Опубликовать')}
           </Button>
         </>}
       >{c.title}</PageTitle>
+      <CourseSteps courseId={c.id} current={2} done={[...(c.title ? [1] : []), ...(c.materials.length ? [2] : [])]} />
       {msg && <div className="mb-3"><Alert kind={msg.kind}>{msg.text}</Alert></div>}
 
-      <Card className="p-4 mb-4">
+      <h2 id="step-1" className="text-xl font-bold mb-2 scroll-mt-24">1. {t('Описание')}</h2>
+      <Card className="p-4 mb-6">
         <div className="grid sm:grid-cols-2 gap-x-4">
           <Field label={t('Название')}><input className={inputCls} defaultValue={c.title} onBlur={(e) => e.target.value !== c.title && void save({ title: e.target.value })} /></Field>
           <Field label={t('Категория')}>
@@ -195,7 +196,7 @@ export default function CourseEditor() {
               const on = c.competency_ids.includes(x.id);
               return (
                 <button key={x.id} onClick={() => void save({ competency_ids: on ? c.competency_ids.filter((i) => i !== x.id) : [...c.competency_ids, x.id] })}
-                  className={`rounded-full px-3 min-h-[40px] border-2 text-sm font-medium ${on ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-200'}`}>
+                  className={`rounded-full px-4 min-h-tap border-2 font-semibold ${on ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 text-slate-800 hover:border-brand-600'}`}>
                   {on && '✓ '}{x.name}
                 </button>
               );
@@ -205,14 +206,14 @@ export default function CourseEditor() {
       </Card>
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="text-lg font-bold">{t('Материалы')}</h2>
+        <h2 id="step-2" className="text-xl font-bold scroll-mt-24">2. {t('Материалы')}</h2>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" icon="upload" onClick={() => setAdding('file')}>{t('Файл')}</Button>
           <Button variant="secondary" icon="link" onClick={() => setAdding('link')}>{t('Ссылка')}</Button>
           <Button variant="secondary" icon="text" onClick={() => setAdding('text')}>{t('Текст')}</Button>
         </div>
       </div>
-      {!c.materials.length && <Alert kind="info">{t('Добавьте материалы: PDF, видео, документы Word/Excel/PowerPoint (автоматически станут PDF), ссылки или текст.')}</Alert>}
+      {!c.materials.length && <Alert kind="info">{t('Материалов пока нет — нажмите «Файл», «Ссылка» или «Текст». Подойдут PDF, видео, Word, Excel и PowerPoint (они сами станут PDF).')}</Alert>}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void onDragEnd(e)}>
         <SortableContext items={c.materials.map((m) => m.id)} strategy={verticalListSortingStrategy}>
           <ol className="space-y-2">
@@ -224,7 +225,8 @@ export default function CourseEditor() {
           </ol>
         </SortableContext>
       </DndContext>
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-wrap justify-between gap-3">
+        <Button icon="right" onClick={() => nav(`/m/courses/${c.id}/test`)}>{t('Дальше: 3. Тест')}</Button>
         <Button variant="danger" icon="trash" onClick={() => window.confirm(t('Удалить курс целиком?')) && void api(`/api/courses/${c.id}`, { method: 'DELETE' }).then(() => nav('/m/courses'))}>{t('Удалить курс')}</Button>
       </div>
       {adding && <AddMaterial kind={adding} courseId={c.id} onClose={() => setAdding(null)} onDone={() => { setAdding(null); load(); }} />}
@@ -275,7 +277,7 @@ function AddMaterial({ kind, courseId, onClose, onDone }: { kind: 'file' | 'link
             <Icon name="upload" size={32} className="mx-auto text-brand-600 mb-2" />
             {file ? <b>{file.name} ({fmtBytes(file.size)})</b> : t('Выберите файл: PDF, MP4/MOV/WEBM, DOC/DOCX, XLS/XLSX, PPT/PPTX (до 300 МБ)')}
           </button>
-          <div className="text-xs text-slate-500 mt-2">{t('Office-файлы автоматически конвертируются в PDF, видео — сжимается до 720p.')}</div>
+          <div className="text-[0.85rem] text-slate-500 mt-2">{t('Office-файлы автоматически конвертируются в PDF, видео — сжимается до 720p.')}</div>
         </div>
       )}
       {kind === 'file' && <LargeUploadHint file={file} />}
@@ -289,7 +291,7 @@ function AddMaterial({ kind, courseId, onClose, onDone }: { kind: 'file' | 'link
           </div>
           {preview ? <div className="border rounded-xl p-4 min-h-[240px]"><MarkdownBlock text={body} /></div>
             : <textarea className={`${inputCls} font-mono`} rows={12} value={body} onChange={(e) => setBody(e.target.value)} />}
-          <div className="text-xs text-slate-500 mt-1">{t('Markdown: # заголовок, **жирный**, *курсив*, - список, 1. нумерация, > цитата')}</div>
+          <div className="text-[0.85rem] text-slate-500 mt-1">{t('Markdown: # заголовок, **жирный**, *курсив*, - список, 1. нумерация, > цитата')}</div>
         </div>
       )}
       {kind !== 'link' && <Field label={t('Минимальное время изучения, секунд (0 — нет требования)')}><input type="number" min={0} className={inputCls} value={minSec} onChange={(e) => setMinSec(Number(e.target.value))} /></Field>}

@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { api, download, errorText } from '../../api/client';
 import { useAuth } from '../../auth';
 import { BarChart } from '../../components/Charts';
-import { Alert, Button, Card, Field, inputCls, PageTitle, Spinner } from '../../components/ui';
+import { Icon, type IconName } from '../../components/Icon';
+import { Alert, Button, Card, EmptyState, Field, inputCls, PageTitle, Spinner } from '../../components/ui';
 import type { Department, ReportData, User } from '../../types';
 import type { CourseRow } from '../methodist/Courses';
 
@@ -12,29 +13,51 @@ const TABS = [
   ['sessions', 'Вход и выход'],
   ['materials-time', 'Время по материалам'],
   ['attestation', 'Аттестация'],
-  ['sync', 'Синхронизация'],
+  ['sync', 'Отправка данных'],
 ] as const;
 
 export function ReportTable({ data, max = 500 }: { data: ReportData; max?: number }) {
   const { t } = useTranslation();
-  if (!data.rows.length) return <div className="text-center text-slate-500 py-8">{t('Нет данных за выбранный период')}</div>;
+  if (!data.rows.length) return <EmptyState icon="chart" title={t('Нет данных')}>{t('За выбранный период ничего нет. Измените даты или фильтры.')}</EmptyState>;
   return (
-    <div className="overflow-auto bg-white border rounded-2xl max-h-[70vh]">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-left sticky top-0"><tr>{data.columns.map((c) => <th key={c.key} className="p-2.5 whitespace-nowrap">{t(c.title)}</th>)}</tr></thead>
+    <div className="overflow-auto bg-white border border-slate-200 rounded-2xl max-h-[70vh]">
+      <table className="w-full">
+        <thead className="bg-slate-100 text-left sticky top-0"><tr>{data.columns.map((c) => <th key={c.key} className="px-3 py-3 whitespace-nowrap font-semibold text-slate-800">{t(c.title)}</th>)}</tr></thead>
         <tbody>
           {data.rows.slice(0, max).map((r, i) => (
-            <tr key={i} className="border-t hover:bg-slate-50">
+            <tr key={i} className="border-t border-slate-200 hover:bg-brand-50/40">
               {data.columns.map((c) => {
                 const v = r[c.key];
                 const s = v == null ? '' : String(v);
-                const tone = s === 'сдал' || s.includes('✓') ? 'text-emerald-700 font-semibold' : s === 'не сдал' || s === '> 60 с' ? 'text-red-700 font-semibold' : s === 'на проверке' ? 'text-amber-700' : s === 'QR' ? 'text-sky-700 font-semibold' : '';
-                return <td key={c.key} className={`p-2.5 whitespace-nowrap ${tone}`}>{s}</td>;
+                const tone = s === 'сдал' || s.includes('✓') ? 'text-emerald-700 font-semibold' : s === 'не сдал' || s === '> 60 с' ? 'text-red-700 font-semibold' : s === 'на проверке' ? 'text-amber-800 font-semibold' : s === 'QR' ? 'text-sky-700 font-semibold' : '';
+                return <td key={c.key} className={`px-3 py-2.5 whitespace-nowrap ${tone}`}>{s}</td>;
               })}
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const SUMMARY: [string, string, IconName, string][] = [
+  ['assigned', 'Назначено', 'tasks', 'text-slate-900'],
+  ['passed', 'Сдано', 'checkCircle', 'text-emerald-700'],
+  ['failed', 'Не сдано', 'xCircle', 'text-red-700'],
+  ['overdue', 'Просрочено', 'alert', 'text-amber-800'],
+];
+
+/** Крупные итоги над таблицей: назначено / сдано / не сдано / просрочено. */
+function SummaryCards({ cards }: { cards: Record<string, unknown> }) {
+  const { t } = useTranslation();
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5" data-testid="report-cards">
+      {SUMMARY.map(([k, l, ic, c]) => (
+        <Card key={k} className="p-4">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold"><Icon name={ic} size={20} className={c} />{t(l)}</div>
+          <div className={`text-3xl font-extrabold mt-1 ${c}`}>{String(cards[k] ?? 0)}</div>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -49,6 +72,7 @@ export default function Reports() {
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<CourseRow[]>([]);
   const [err, setErr] = useState('');
+  const [summary, setSummary] = useState<ReportData | null>(null);
 
   useEffect(() => {
     void api<Department[]>('/api/departments').then(setDepts);
@@ -65,20 +89,23 @@ export default function Reports() {
 
   // авто-обновление, чтобы на демо было видно, как данные приходят после включения сети
   useEffect(() => {
-    const iv = setInterval(() => void api<ReportData>(`/api/reports/${tab}?${qs}`).then(setData).catch(() => undefined), 5000);
+    const load = () => void api<ReportData>(`/api/reports/summary?${qs}`).then(setSummary).catch(() => undefined);
+    load();
+    const iv = setInterval(() => {
+      load();
+      void api<ReportData>(`/api/reports/${tab}?${qs}`).then(setData).catch(() => undefined);
+    }, 5000);
     return () => clearInterval(iv);
   }, [tab, qs]);
 
-  const cards = data?.cards;
+  const cards = summary?.cards;
   return (
     <div>
       <PageTitle actions={<>
-        <Button variant="secondary" icon="download" onClick={() => void download(`/api/reports/${tab}/export?format=xlsx&${qs}`, `${tab}.xlsx`)}>Excel</Button>
-        <Button variant="secondary" icon="download" onClick={() => void download(`/api/reports/${tab}/export?format=csv&${qs}`, `${tab}.csv`)}>CSV</Button>
+        <Button variant="secondary" icon="download" onClick={() => void download(`/api/reports/${tab}/export?format=xlsx&${qs}`, `${tab}.xlsx`)}>{t('Скачать Excel')}</Button>
+        <Button variant="secondary" icon="download" onClick={() => void download(`/api/reports/${tab}/export?format=csv&${qs}`, `${tab}.csv`)}>{t('Скачать CSV')}</Button>
       </>} sub={user?.role === 'manager' ? `${t('Подразделение')}: ${user.department_name}` : undefined}>{t('Отчёты')}</PageTitle>
-      <div className="flex gap-1 overflow-x-auto mb-3 pb-1">
-        {TABS.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`whitespace-nowrap rounded-xl px-4 min-h-tap font-semibold ${tab === k ? 'bg-brand-600 text-white' : 'bg-white border text-slate-700'}`}>{t(l)}</button>)}
-      </div>
+      {cards && <SummaryCards cards={cards} />}
       <Card className="p-3 mb-4 grid grid-cols-2 lg:grid-cols-5 gap-x-3">
         <Field label={t('С')}><input type="date" className={inputCls} value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field>
         <Field label={t('По')}><input type="date" className={inputCls} value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
@@ -88,27 +115,29 @@ export default function Reports() {
         <Field label={t('Сотрудник')}><select className={inputCls} value={f.user_id} onChange={(e) => setF({ ...f, user_id: e.target.value })}><option value="">{t('Все')}</option>{users.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}</select></Field>
         <Field label={t('Курс')}><select className={inputCls} value={f.course_id} onChange={(e) => setF({ ...f, course_id: e.target.value })}><option value="">{t('Все')}</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></Field>
       </Card>
+      <div className="flex gap-2 overflow-x-auto mb-4 pb-1" role="tablist">
+        {TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`whitespace-nowrap rounded-xl px-4 min-h-tap font-semibold ${tab === k ? 'bg-brand-600 text-white' : 'bg-white border border-slate-300 text-slate-800 hover:border-brand-600'}`}>{t(l)}</button>)}
+      </div>
       {err && <Alert kind="error">{err}</Alert>}
       {!data ? <Spinner /> : (
         <>
           {tab === 'summary' && cards && (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
-                {[['assigned', 'Назначено'], ['passed', 'Сдано'], ['failed', 'Не сдано'], ['pending_review', 'На проверке'], ['overdue', 'Просрочено'], ['avg_time_per_course', 'Среднее время на курс']].map(([k, l]) => (
-                  <Card key={k} className="p-4"><div className="text-sm text-slate-500">{t(l)}</div><div className={`text-3xl font-black ${k === 'overdue' || k === 'failed' ? 'text-red-600' : k === 'passed' ? 'text-emerald-600' : ''}`}>{String(cards[k])}</div></Card>
-                ))}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <Card className="p-4"><div className="text-slate-700 font-semibold">{t('Ответы ждут проверки')}</div><div className="text-2xl font-extrabold text-amber-800">{String(cards.pending_review ?? 0)}</div></Card>
+                <Card className="p-4"><div className="text-slate-700 font-semibold">{t('Среднее время на курс')}</div><div className="text-2xl font-extrabold">{String(cards.avg_time_per_course ?? '')}</div></Card>
               </div>
               <Card className="p-4 mb-4">
                 <BarChart stacked labels={(data.by_department || []).map((d) => String(d.department))} series={[
-                  { label: t('Сдано'), data: (data.by_department || []).map((d) => Number(d.passed)), color: '#16a34a' },
-                  { label: t('На проверке'), data: (data.by_department || []).map((d) => Number(d.pending_review)), color: '#f59e0b' },
-                  { label: t('Не сдано'), data: (data.by_department || []).map((d) => Number(d.failed)), color: '#dc2626' },
-                  { label: t('Не начато / в процессе'), data: (data.by_department || []).map((d) => Number(d.assigned) - Number(d.passed) - Number(d.failed) - Number(d.pending_review)), color: '#94a3b8' },
+                  { label: t('Сдано'), data: (data.by_department || []).map((d) => Number(d.passed)), color: '#1B7D45' },
+                  { label: t('На проверке'), data: (data.by_department || []).map((d) => Number(d.pending_review)), color: '#C98200' },
+                  { label: t('Не сдано'), data: (data.by_department || []).map((d) => Number(d.failed)), color: '#C62828' },
+                  { label: t('Не начато / в процессе'), data: (data.by_department || []).map((d) => Number(d.assigned) - Number(d.passed) - Number(d.failed) - Number(d.pending_review)), color: '#C9C4CF' },
                 ]} />
               </Card>
             </>
           )}
-          {tab === 'sync' && <div className="mb-3"><Alert kind="info">{t('Колонка «Задержка после появления сети» — время от момента, когда телефон увидел сеть, до записи данных на сервер. Требование кейса — не более 60 секунд.')}</Alert></div>}
+          {tab === 'sync' && <div className="mb-3"><Alert kind="info">{t('«Задержка после появления сети» — сколько прошло от момента, когда у телефона появился интернет, до записи данных на сервер. Норма — не больше 60 секунд.')}</Alert></div>}
           <ReportTable data={data} />
         </>
       )}
