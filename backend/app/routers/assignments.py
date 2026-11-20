@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -9,8 +10,11 @@ from app.db import get_db
 from app.models import Course, CourseAssignment, User
 from app.schemas import AssignmentIn
 from app.security import STAFF, STAFF_MANAGER, api_error, get_current_user, require_role
+from app.services.reports import assignment_states
 
 router = APIRouter(tags=["assignments"])
+
+RETRAIN_DAYS = 14  # срок повторного обучения по умолчанию
 
 
 def assignment_out(a: CourseAssignment, course: Course | None = None, user: User | None = None) -> dict:
@@ -36,16 +40,49 @@ def create_assignments(body: AssignmentIn, me: User = Depends(require_role(*STAF
     else:
         raise api_error(422, "no_target", "Выберите сотрудников или подразделение")
     users = list(db.scalars(q).unique())
+    if not users:
+        raise api_error(404, "no_users", "Сотрудники не найдены")
     if me.role == "manager" and any(u.department_id != me.department_id for u in users):
         raise api_error(403, "forbidden", "Руководитель назначает только в своём подразделении")
-    created = 0
+    existing = {a.user_id: a for a in db.scalars(select(CourseAssignment).where(
+        CourseAssignment.course_id == body.course_id, CourseAssignment.user_id.in_([u.id for u in users])))}
+    results = []
     for u in users:
-        res = db.execute(pg_insert(CourseAssignment).values(
-            id=uuid.uuid4(), course_id=body.course_id, user_id=u.id, assigned_by=me.id, due_date=body.due_date,
-        ).on_conflict_do_update(index_elements=["course_id", "user_id"], set_={"due_date": body.due_date}).returning(CourseAssignment.id))
-        created += 1 if res.scalar() else 0
+        a = existing.get(u.id)
+        if a is None:
+            # ON CONFLICT DO NOTHING — на случай двойного клика/параллельного запроса
+            res = db.execute(pg_insert(CourseAssignment).values(
+                id=uuid.uuid4(), course_id=body.course_id, user_id=u.id, assigned_by=me.id, due_date=body.due_date,
+            ).on_conflict_do_nothing(index_elements=["course_id", "user_id"]).returning(CourseAssignment.id))
+            results.append((u, "assigned" if res.scalar() else "already_assigned"))
+        elif body.retrain:
+            # повторное обучение: новый срок, статус с нуля; старые попытки остаются в истории
+            a.reset_at = datetime.now(timezone.utc)
+            a.due_date = body.due_date or (date.today() + timedelta(days=RETRAIN_DAYS))
+            a.assigned_by = me.id
+            results.append((u, "retrained"))
+        else:
+            # уже назначен: ничего не меняем (раньше срок молча затирался на пустой); срок обновляем, только если его передали
+            if body.due_date:
+                a.due_date = body.due_date
+            results.append((u, "already_assigned"))
     db.commit()
-    return {"assigned": created}
+    out = []
+    for u, outcome in results:
+        st = assignment_states(db, u).get(str(body.course_id), {})
+        out.append({"user_id": str(u.id), "full_name": u.full_name, "outcome": outcome,
+                    "status": st.get("status"), "status_ru": st.get("status_ru"),
+                    "due_date": st.get("due_date_iso"), "overdue": st.get("overdue", False)})
+    first = out[0]
+    return {
+        "assigned": sum(1 for r in out if r["outcome"] == "assigned"),
+        "already_assigned": any(r["outcome"] == "already_assigned" for r in out),
+        "already_assigned_count": sum(1 for r in out if r["outcome"] == "already_assigned"),
+        "retrained": sum(1 for r in out if r["outcome"] == "retrained"),
+        # для одного сотрудника (кнопка «Назначить» в профиле 360) — его итог и статус сразу на верхнем уровне
+        **({k: first[k] for k in ("outcome", "full_name", "status", "status_ru", "due_date", "overdue")} if len(out) == 1 else {}),
+        "results": out,
+    }
 
 
 @router.get("/assignments")

@@ -111,6 +111,8 @@ export interface AssignmentState {
   materials_count: number;
   test_id: string | null;
   max_attempts: number | null;
+  /** Повторное обучение: попытки до этого момента — история, в статус и лимит попыток не входят */
+  reset_at?: string | null;
 }
 
 export interface SyncState {

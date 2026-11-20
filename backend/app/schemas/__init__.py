@@ -118,6 +118,7 @@ class AssignmentIn(BaseModel):
     user_ids: list[uuid.UUID] | None = None
     department_id: uuid.UUID | None = None
     due_date: date | None = None
+    retrain: bool = False  # повторное обучение уже назначенного курса: новый срок, статус «не начат»
 
 
 class ReviewIn(BaseModel):

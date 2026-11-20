@@ -76,6 +76,7 @@ def sync_state(since: str | None = None, me: User = Depends(get_current_user), d
             "cover_color": c.cover_color, "pass_score": c.pass_score, "due_date": a.due_date.isoformat() if a.due_date else None,
             "materials_count": sum(1 for m in c.materials if m.type != "link"),  # ссылки не входят в прогресс
             "test_id": str(t.id) if t else None, "max_attempts": t.max_attempts if t else None,
+            "reset_at": a.reset_at.isoformat() if a.reset_at else None,
         })
     tests = {t.id: t for t in db.scalars(select(Test))}
     courses = {c.id: c for c in db.scalars(select(Course))}

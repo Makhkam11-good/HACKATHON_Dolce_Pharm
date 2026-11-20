@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import settings
@@ -17,3 +17,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# Колонки, добавленные после первого запуска демо: create_all() их в существующие таблицы не добавляет.
+_MIGRATIONS = [
+    "ALTER TABLE course_assignments ADD COLUMN IF NOT EXISTS reset_at timestamptz",
+]
+
+
+def ensure_schema() -> None:
+    Base.metadata.create_all(engine)
+    with engine.begin() as conn:
+        for sql in _MIGRATIONS:
+            conn.execute(text(sql))

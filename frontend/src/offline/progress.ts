@@ -67,9 +67,22 @@ export function mergeAttempts(local: AttemptRec[], server: ServerAttempt[]): Mer
   return [...map.values()].sort((x, y) => (y.finishedAt || '').localeCompare(x.finishedAt || ''));
 }
 
-export function useAttempts(userId: string | undefined, state: SyncState | null | undefined) {
+/** Попытка из прошлого цикла обучения (до «повторного обучения»)? */
+export function isArchived(a: MergedAttempt, state: SyncState | null | undefined): boolean {
+  const reset = state?.assignments.find((x) => x.course_id === a.courseId)?.reset_at;
+  if (!reset) return false;
+  const when = a.finishedAt || a.local?.startedAt || '';
+  return !!when && new Date(when).getTime() < new Date(reset).getTime();
+}
+
+/**
+ * Попытки сотрудника (сервер + локальные). По умолчанию — только текущий цикл обучения: после повторного
+ * назначения старые попытки не влияют на статус и счётчик попыток. withHistory — все попытки (экран «Мои результаты»).
+ */
+export function useAttempts(userId: string | undefined, state: SyncState | null | undefined, withHistory = false) {
   const local = useLiveQuery(() => (userId ? db.attempts.where('userId').equals(userId).toArray() : []), [userId], []);
-  return mergeAttempts(local || [], state?.attempts || []);
+  const all = mergeAttempts(local || [], state?.attempts || []);
+  return withHistory ? all : all.filter((a) => !isArchived(a, state));
 }
 
 export function courseStatus(attempts: MergedAttempt[], courseId: string, anyProgress: boolean): 'passed' | 'failed' | 'pending_review' | 'in_progress' | 'not_started' {

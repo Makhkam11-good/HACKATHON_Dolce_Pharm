@@ -42,7 +42,9 @@ page.on('dialog', (d) => d.accept());
 page.on('pageerror', (e) => console.log('  pageerror:', e.message));
 
 const m = await api('/api/auth/login', null, { login: 'methodist', password: 'demo123' });
-const op = await api('/api/auth/login', null, { login: 'op01', password: 'demo123' });
+// не op01/op02: у них «чистая история» для живого демо
+const OP = process.env.E2E_OPERATOR || 'op20';
+const op = await api('/api/auth/login', null, { login: OP, password: 'demo123' });
 const courseTime = async () => {
   const rep = await api(`/api/reports/materials-time?user_id=${op.user.id}`, m.access_token);
   return rep.rows.filter((r) => r.course === COURSE).reduce((s, r) => s + r.total_ms, 0) / 1000;
@@ -51,10 +53,12 @@ const baseline = await courseTime();
 
 // ---------------------------------------------------------------- вход и скачивание
 await page.goto(`${BASE}/login`);
-await page.getByRole('button', { name: /op01/ }).click();
+await page.fill('input:not([type="password"])', OP);
+await page.fill('input[type="password"]', 'demo123');
+await page.click('button[type="submit"]');
 await page.waitForURL('**/my');
 await page.getByRole('heading', { name: 'Мои курсы' }).waitFor();
-ok('вход op01');
+ok(`вход ${OP}`);
 await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 30000 }).catch(async () => {
   await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 30000 });

@@ -16,7 +16,7 @@ from sqlalchemy import func, insert, select, text
 
 from app import models  # noqa: F401
 from app.config import settings
-from app.db import Base, SessionLocal, engine
+from app.db import Base, SessionLocal, engine, ensure_schema
 from app.models import (
     ActivityEvent,
     AnswerOption,
@@ -144,7 +144,7 @@ def fake_answers(test: Test, skill: float, force_review: bool = False) -> list[d
 
 
 def seed(force: bool = False) -> None:
-    Base.metadata.create_all(engine)
+    ensure_schema()
     db = SessionLocal()
     try:
         if db.scalar(select(func.count()).select_from(User)):
@@ -241,6 +241,10 @@ def seed(force: bool = False) -> None:
                         start_node_id="n1", data=content.SPILL_SCENARIO))
         for c in (c1, c2, c3):
             for u in ops:
+                # Демо: Ахметову (op01) «Действия при разливе» не назначен — его рекомендует оценка 360,
+                # и на выступлении есть что назначить кнопкой «Назначить».
+                if c is c3 and u is ops[0]:
+                    continue
                 db.add(CourseAssignment(course_id=c.id, user_id=u.id, assigned_by=methodist.id,
                                         due_date=(datetime.now(timezone.utc) + timedelta(days=random.choice([-3, 7, 14, 21]))).date()))
         # библиотека
@@ -352,6 +356,19 @@ def assessments(db, ops, manager, comps):
     db.flush()
     for rid, role in [(subj2.id, "self"), (subj2.manager_id, "manager"), (ops[0].id, "peer"), (ops[9].id, "peer")]:
         db.add(AssessmentRater(assessment_id=b.id, rater_id=rid, rater_role=role))
+    # Ахметов (op01) — закрытая 180: слабые «Командная работа» и «Нештатные ситуации» →
+    # рекомендованы «Действия при разливе» (не назначен — демо кнопки «Назначить») и «Охрана труда» (уже назначен).
+    subj3 = ops[0]
+    c = Assessment(subject_id=subj3.id, title=f"Оценка 180: {subj3.full_name}", period="III квартал 2026", status="closed",
+                   created_by=manager.id)
+    db.add(c)
+    db.flush()
+    scores3 = {"self": [4, 4, 4, 4, 4, 4], "manager": [4, 4, 4, 4, 2, 2]}
+    for rid, role in [(subj3.id, "self"), (subj3.manager_id, "manager")]:
+        db.add(AssessmentRater(assessment_id=c.id, rater_id=rid, rater_role=role, completed_at=datetime.now(timezone.utc)))
+        for ci, comp in enumerate(comps):
+            db.add(AssessmentResponse(assessment_id=c.id, rater_id=rid, rater_role=role, competency_id=comp.id, score=scores3[role][ci],
+                                      comment="Не уверен в порядке действий при разливе" if (ci == 5 and role == "manager") else None))
     db.flush()
 
 

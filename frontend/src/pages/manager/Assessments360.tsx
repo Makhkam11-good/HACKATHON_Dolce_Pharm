@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, errorText } from '../../api/client';
 import { RadarChart } from '../../components/Charts';
@@ -11,9 +11,81 @@ interface ProfileRow { competency_id: string; name: string; self: number | null;
 interface Profile {
   assessment: { id: string; title: string; period: string; status: string; subject_id: string; subject_name: string };
   kind: string; raters: { name: string; role: string; completed: boolean }[]; rows: ProfileRow[];
-  recommendations: { course_id: string; title: string; competencies: string[] }[]; comments: { competency_id: string; rater_role: string; comment: string }[];
+  recommendations: Rec[]; comments: { competency_id: string; rater_role: string; comment: string }[];
 }
 const ROLE: Record<string, string> = { self: 'самооценка', manager: 'руководитель', peer: 'коллега' };
+
+interface AsgState { status: string; status_ru: string; due_date: string | null; overdue: boolean; attempts?: number; best_score?: number | null }
+interface Rec { course_id: string; title: string; competencies: string[]; assignment: AsgState | null }
+interface AssignResult extends AsgState { outcome: 'assigned' | 'already_assigned' | 'retrained'; full_name: string; already_assigned: boolean }
+const STATUS_COLOR: Record<string, 'slate' | 'blue' | 'green' | 'amber' | 'red'> = {
+  not_started: 'slate', in_progress: 'blue', passed: 'green', pending_review: 'amber', failed: 'red',
+};
+const fmtDue = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('ru-RU') : '');
+
+/** Строка рекомендованного курса: статус сотрудника и кнопка с видимым результатом. */
+function RecRow({ r, subjectId, onToast }: { r: Rec; subjectId: string; onToast: (kind: 'success' | 'error' | 'info', text: string) => void }) {
+  const { t } = useTranslation();
+  const [asg, setAsg] = useState<AsgState | null>(r.assignment);
+  const [done, setDone] = useState<AssignResult['outcome'] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const assign = async (retrain: boolean) => {
+    if (retrain && !window.confirm(t('Назначить курс повторно? Срок обновится, статус станет «не начат». История попыток сохранится.'))) return;
+    setBusy(true);
+    setErr('');
+    try {
+      // срок по умолчанию — 2 недели (как у повторного обучения на сервере)
+      const due = new Date(Date.now() + 14 * 86400000);
+      const dueIso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+      const res = await api<AssignResult>('/api/assignments', { body: { course_id: r.course_id, user_ids: [subjectId], retrain, due_date: dueIso } });
+      setAsg({ status: res.status, status_ru: res.status_ru, due_date: res.due_date, overdue: res.overdue });
+      setDone(res.outcome);
+      if (res.outcome === 'assigned') onToast('success', `${t('Курс назначен')}: ${res.full_name}`);
+      else if (res.outcome === 'retrained') onToast('success', `${t('Назначено повторное обучение')}: ${res.full_name}`);
+      else onToast('info', `${t('Уже назначен')}: ${res.full_name} — ${t(res.status_ru)}`);
+    } catch (e) {
+      const text = errorText(e);
+      setErr(text);
+      onToast('error', text);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let action: ReactNode;
+  if (done === 'assigned' || done === 'retrained') {
+    action = <Button icon="check" variant="success" disabled>{done === 'assigned' ? t('Назначено') : t('Назначено повторно')} ✓</Button>;
+  } else if (!asg) {
+    action = <Button icon="plus" disabled={busy} onClick={() => void assign(false)}>{busy ? t('Назначаем…') : t('Назначить')}</Button>;
+  } else if (asg.status === 'passed') {
+    action = <Button icon="refresh" variant="secondary" disabled={busy} onClick={() => void assign(true)}>{busy ? t('Назначаем…') : t('Назначить повторно')}</Button>;
+  } else {
+    action = <Button variant="secondary" disabled>{t('Уже назначен')}</Button>;
+  }
+
+  return (
+    <li className="border rounded-xl p-3" data-course={r.course_id}>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex-1 min-w-[12rem]">
+          <div className="font-semibold">{r.title}</div>
+          <div className="text-sm text-slate-500">{t('Развивает')}: {r.competencies.join(', ')}</div>
+          <div className="flex flex-wrap gap-1.5 mt-1.5" data-testid="asg-status">
+            {asg ? (
+              <>
+                <Badge color={STATUS_COLOR[asg.status] || 'slate'}>{t(asg.status_ru)}</Badge>
+                {asg.due_date && <Badge color={asg.overdue ? 'red' : 'slate'}><Icon name="clock" size={14} />{t('до')} {fmtDue(asg.due_date)}{asg.overdue ? ` · ${t('просрочен')}` : ''}</Badge>}
+              </>
+            ) : <Badge color="slate">{t('не назначен')}</Badge>}
+          </div>
+        </div>
+        {action}
+      </div>
+      {err && <div className="mt-2"><Alert kind="error">{err}</Alert></div>}
+    </li>
+  );
+}
 
 export default function Assessments360() {
   const { t } = useTranslation();
@@ -21,20 +93,24 @@ export default function Assessments360() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [toast, setToast] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = (kind: 'success' | 'error' | 'info', text: string) => {
+    setToast({ kind, text });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 5000);
+  };
+  const toastEl = toast && (
+    <div role="status" aria-live="polite" className="fixed z-50 left-1/2 -translate-x-1/2 w-[min(92vw,28rem)] shadow-lg" style={{ bottom: 'calc(var(--bottom-offset, 0px) + 1rem)' }}>
+      <Alert kind={toast.kind}>{toast.text}</Alert>
+    </div>
+  );
   const load = () => void api<Item[]>('/api/assessments').then(setList);
   useEffect(load, []);
   const open = (id: string) => void api<Profile>(`/api/assessments/${id}/profile`).then(setProfile);
 
   if (profile) {
     const p = profile;
-    const assign = async (courseId: string) => {
-      try {
-        await api('/api/assignments', { body: { course_id: courseId, user_ids: [p.assessment.subject_id] } });
-        setMsg({ kind: 'success', text: t('Курс назначен') });
-      } catch (e) {
-        setMsg({ kind: 'error', text: errorText(e) });
-      }
-    };
     return (
       <div className="max-w-5xl">
         <button className="text-brand-700 font-medium min-h-tap flex items-center" onClick={() => { setProfile(null); setMsg(null); load(); }}><Icon name="left" />{t('Оценка 360')}</button>
@@ -74,13 +150,11 @@ export default function Assessments360() {
           <div className="font-bold mb-2">{t('Рекомендованные курсы')}</div>
           {!p.recommendations.length ? <div className="text-slate-500">{t('Нет компетенций со средней оценкой ниже 3 — рекомендаций нет.')}</div> : (
             <ul className="space-y-2">{p.recommendations.map((r) => (
-              <li key={r.course_id} className="flex flex-wrap items-center gap-2 border rounded-xl p-3">
-                <div className="flex-1"><div className="font-semibold">{r.title}</div><div className="text-sm text-slate-500">{t('Развивает')}: {r.competencies.join(', ')}</div></div>
-                <Button icon="plus" onClick={() => void assign(r.course_id)}>{t('Назначить')}</Button>
-              </li>
+              <RecRow key={`${p.assessment.id}:${r.course_id}`} r={r} subjectId={p.assessment.subject_id} onToast={showToast} />
             ))}</ul>
           )}
         </Card>
+        {toastEl}
         {p.comments.length > 0 && (
           <Card className="p-4 mt-4">
             <div className="font-bold mb-2">{t('Комментарии')}</div>

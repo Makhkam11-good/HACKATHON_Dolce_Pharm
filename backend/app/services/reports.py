@@ -143,15 +143,35 @@ def attestation_data(db: Session, viewer: User, f: Filters) -> list[dict]:
     q = select(CourseAssignment).where(CourseAssignment.user_id.in_(list(users) or [uuid.uuid4()]))
     if f.course_id:
         q = q.where(CourseAssignment.course_id == f.course_id)
-    assignments = list(db.scalars(q))
+    out = assignment_rows(db, users, list(db.scalars(q)))
+    out.sort(key=lambda r: (r["department"], r["full_name"], r["course"]))
+    return out
+
+
+def assignment_states(db: Session, user: User) -> dict[str, dict]:
+    """Текущий статус сотрудника по каждому назначенному курсу: {course_id: строка как в отчёте «Аттестация»}."""
+    asgs = list(db.scalars(select(CourseAssignment).where(CourseAssignment.user_id == user.id)))
+    return {r["course_id"]: r for r in assignment_rows(db, {user.id: user}, asgs)}
+
+
+def _counts_after(when: datetime | None, reset_at: datetime | None) -> bool:
+    """Попытка/событие входит в текущий цикл обучения (после повторного назначения)."""
+    return reset_at is None or (when is not None and when >= reset_at)
+
+
+def assignment_rows(db: Session, users: dict, assignments: list[CourseAssignment]) -> list[dict]:
+    """Статус по назначениям. После «повторного обучения» (reset_at) старые попытки и активность
+    остаются в истории, но статус, лучший балл и число попыток считаются только по новому циклу."""
     courses = {c.id: c for c in db.scalars(select(Course))}
     tests = {t.course_id: t for t in db.scalars(select(Test))}
     attempts = defaultdict(list)
     for a in db.scalars(select(TestAttempt).where(TestAttempt.user_id.in_(list(users) or [uuid.uuid4()]))):
         attempts[(a.user_id, a.test_id)].append(a)
     certs = {c.attempt_id: c for c in db.scalars(select(Certificate).where(Certificate.user_id.in_(list(users) or [uuid.uuid4()])))}
-    started = {(uid, cid) for uid, cid in db.execute(
-        select(ActivityEvent.user_id, ActivityEvent.course_id).where(ActivityEvent.type == "material_interval").distinct())}
+    started = {(uid, cid): last for uid, cid, last in db.execute(
+        select(ActivityEvent.user_id, ActivityEvent.course_id, func.max(ActivityEvent.started_at))
+        .where(ActivityEvent.type == "material_interval", ActivityEvent.user_id.in_(list(users) or [uuid.uuid4()]))
+        .group_by(ActivityEvent.user_id, ActivityEvent.course_id))}
     today = datetime.now(TZ).date()
     out = []
     for asg in assignments:
@@ -160,6 +180,7 @@ def attestation_data(db: Session, viewer: User, f: Filters) -> list[dict]:
             continue
         t = tests.get(c.id)
         atts = sorted(attempts.get((u.id, t.id), []) if t else [], key=lambda a: a.finished_at or a.created_at)
+        atts = [a for a in atts if _counts_after(a.finished_at or a.created_at, asg.reset_at)]
         passed = [a for a in atts if a.status == "passed"]
         if passed:
             status, ref = "passed", max(passed, key=lambda a: a.score)
@@ -168,7 +189,8 @@ def attestation_data(db: Session, viewer: User, f: Filters) -> list[dict]:
         elif atts:
             status, ref = "failed", max(atts, key=lambda a: a.score)
         else:
-            status, ref = ("in_progress" if (u.id, c.id) in started else "not_started"), None
+            last = started.get((u.id, c.id))
+            status, ref = ("in_progress" if last and _counts_after(last, asg.reset_at) else "not_started"), None
         best = max((float(a.score) for a in atts), default=None)
         cert = certs.get(ref.id) if ref and status == "passed" else None
         overdue = bool(asg.due_date and asg.due_date < today and status != "passed")
@@ -180,8 +202,9 @@ def attestation_data(db: Session, viewer: User, f: Filters) -> list[dict]:
             "date": fmt_dt(ref.finished_at) if ref else "", "certificate": cert.number if cert else "",
             "certificate_id": str(cert.id) if cert else None,
             "due_date": asg.due_date.strftime("%d.%m.%Y") if asg.due_date else "", "overdue": overdue,
+            "due_date_iso": asg.due_date.isoformat() if asg.due_date else None,
+            "retrained": asg.reset_at is not None,
         })
-    out.sort(key=lambda r: (r["department"], r["full_name"], r["course"]))
     return out
 
 

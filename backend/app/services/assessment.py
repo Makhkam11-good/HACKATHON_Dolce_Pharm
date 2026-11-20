@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Assessment, AssessmentRater, AssessmentResponse, Competency, Course, User, course_competencies
+from app.services.reports import assignment_states
 
 
 def _avg(xs):
@@ -44,6 +45,14 @@ def profile(db: Session, a: Assessment) -> dict:
             e = seen.setdefault(course.id, {"course_id": str(course.id), "title": course.title, "competencies": []})
             e["competencies"].append(names[str(cid)])
         recs = list(seen.values())
+        subject = db.get(User, a.subject_id)
+        states = assignment_states(db, subject) if subject else {}
+        for r in recs:
+            st = states.get(r["course_id"])
+            r["assignment"] = None if st is None else {
+                "status": st["status"], "status_ru": st["status_ru"], "due_date": st["due_date_iso"],
+                "overdue": st["overdue"], "attempts": st["attempts"], "best_score": st["best_score"],
+            }
     return {
         "assessment": {"id": str(a.id), "title": a.title, "period": a.period, "status": a.status,
                        "subject_id": str(a.subject_id), "subject_name": users.get(a.subject_id, "")},

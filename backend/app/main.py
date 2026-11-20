@@ -6,14 +6,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app import models  # noqa: F401 — регистрирует модели в metadata
-from app.db import Base, engine
+from app.db import ensure_schema
 from app.routers import assessments, assignments, attempts, auth, courses, files, imports, library, reports, scenarios, sync, tests, users
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 @asynccontextmanager
 async def lifespan(_app):
-    Base.metadata.create_all(engine)
+    ensure_schema()
     yield
 
 

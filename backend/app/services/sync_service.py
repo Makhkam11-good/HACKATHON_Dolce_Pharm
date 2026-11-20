@@ -20,6 +20,7 @@ from app.models import (
     Certificate,
     Competency,
     Course,
+    CourseAssignment,
     Device,
     EventAlias,
     Scenario,
@@ -151,7 +152,11 @@ def save_attempt(db: Session, user: User, device: Device | None, iid: uuid.UUID,
     if not test:
         raise Reject("unknown_test")
     course = db.get(Course, test.course_id)
-    used = db.scalar(select(func.count()).select_from(TestAttempt).where(TestAttempt.user_id == user.id, TestAttempt.test_id == test.id))
+    used_q = select(func.count()).select_from(TestAttempt).where(TestAttempt.user_id == user.id, TestAttempt.test_id == test.id)
+    asg = db.scalar(select(CourseAssignment).where(CourseAssignment.user_id == user.id, CourseAssignment.course_id == test.course_id))
+    if asg and asg.reset_at:  # после повторного обучения попытки считаются заново
+        used_q = used_q.where(func.coalesce(TestAttempt.finished_at, TestAttempt.created_at) >= asg.reset_at)
+    used = db.scalar(used_q)
     if used >= test.max_attempts:
         raise Reject("attempt_limit_exceeded")
 

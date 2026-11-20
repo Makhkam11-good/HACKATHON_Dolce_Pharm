@@ -20,7 +20,7 @@ export default function Results() {
   const { user } = useAuth();
   const online = useOnline();
   const state = useSyncState(user?.id);
-  const attempts = useAttempts(user?.id, state);
+  const attempts = useAttempts(user?.id, state, true);
   const [err, setErr] = useState('');
   const progress = useLiveQuery(() => (user ? db.progress.where('userId').equals(user.id).toArray() : []), [user?.id], []);
   const courses = useLiveQuery(() => db.courses.toArray(), [], []);
