@@ -2,14 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- Дизайн-система Dolce Pharm: базовые токены ---------- */
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  color: #0f172a;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #2B2730;
   -webkit-tap-highlight-color: transparent;
+  --c-primary: #4F007D;
+  --c-accent: #6839CC;
+  --c-coral: #E56D6D;
+  --c-ink: #201E1E;
+  --c-text: #2B2730;
+  --c-text-2: #5C5566;
+  --c-border: #E5E2E9;
+  --c-bg: #F7F5F9;
+  --c-ok: #1B7D45;
+  --c-warn: #9A5B00;
+  --c-err: #C62828;
+  --c-neutral: #555555;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --radius-btn: 18px; --radius-card: 16px;
 }
 
-html, body { background: #f8fafc; }
-body { margin: 0; overscroll-behavior-y: none; }
+/* Телефон: базовый шрифт 18px (все rem-размеры Tailwind крупнее на 12.5%), интервал 1.5 */
+html { font-size: 112.5%; }
+@media (min-width: 768px) { html { font-size: 100%; } }
+
+html, body { background: var(--c-bg); }
+body { margin: 0; overscroll-behavior-y: none; line-height: 1.5; color: var(--c-text); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { color: var(--c-ink); line-height: 1.25; }
+/* видимый фокус для клавиатуры */
+:focus-visible { outline: 3px solid var(--c-accent); outline-offset: 2px; border-radius: 6px; }
+button:disabled { cursor: not-allowed; }
 
 /*
  * Нижняя навигация и закреплённые снизу панели.
@@ -19,7 +42,7 @@ body { margin: 0; overscroll-behavior-y: none; }
  * (просмотр материала, тест), иначе высота таб-бара + safe area.
  */
 :root {
-  --bottom-nav-h: 60px;
+  --bottom-nav-h: 68px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 .app-shell {

@@ -2,7 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
 import { Layout } from './components/Layout';
-import { NeedNetwork, Spinner } from './components/ui';
+import { NeedNetwork, Spinner, ToastProvider } from './components/ui';
 import Login from './pages/auth/Login';
 import type { Role } from './types';
 
@@ -52,6 +52,7 @@ function Home() {
 export default function App() {
   return (
     <AuthProvider>
+      <ToastProvider>
       <BrowserRouter>
         <Suspense fallback={<Spinner />}>
           <Routes>
@@ -84,6 +85,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

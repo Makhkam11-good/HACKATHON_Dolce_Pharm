@@ -10,7 +10,7 @@ export function usePendingCount(userId: string | undefined): number {
   return useLiveQuery(() => (userId ? db.outbox.where('[userId+status]').equals([userId, 'pending']).count() : 0), [userId], 0) ?? 0;
 }
 
-/** Главная кнопка сотрудника «Передать мастеру без сети» (раздел «Ещё», экран результата теста). */
+/** Главная кнопка сотрудника «Передать результаты мастеру» (раздел «Ещё», экран результата теста). */
 export function QrTransferButton({ onNavigate, className = '' }: { onNavigate?: () => void; className?: string }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -19,11 +19,11 @@ export function QrTransferButton({ onNavigate, className = '' }: { onNavigate?: 
   if (!user || user.role !== 'employee') return null;
   return (
     <div className={className}>
-      <Button big icon="qr" className="w-full" disabled={!pending} onClick={() => { onNavigate?.(); nav('/qr-transfer'); }}>
-        {t('Передать мастеру без сети')}
+      <Button big icon="send" className="w-full" disabled={!pending} onClick={() => { onNavigate?.(); nav('/qr-transfer'); }}>
+        {t('Передать результаты мастеру')}
       </Button>
-      <div className="text-sm text-slate-500 mt-1 text-center">
-        {pending ? t('Не отправлено записей: {{n}}', { n: pending }) : t('Всё уже отправлено')}
+      <div className="text-slate-600 mt-1.5 text-center">
+        {pending ? t('Ждут отправки: {{n}}. Мастер примет их без интернета', { n: pending }) : t('Всё уже отправлено')}
       </div>
     </div>
   );
