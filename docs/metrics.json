@@ -1,0 +1,31 @@
+{
+  "measured_at": "2026-11-20T19:16:33.625Z",
+  "device": "Pixel 7 (эмуляция Chromium), сервер на ноутбуке, доступ https://localhost",
+  "user": "op17",
+  "course_save_seconds": 0.3,
+  "course_package_mb": 0.2,
+  "course_package_files_mb": 0.1,
+  "offline_app_open_seconds": 0.1,
+  "offline_pdf_open_seconds": 0.1,
+  "typical_result_outbox_records": 8,
+  "typical_result_qr_codes": 9,
+  "qr_carousel_cycle_seconds": 9,
+  "sync_full_course_seconds": 0.2,
+  "sync_after_network_seconds": {
+    "median": 0.8,
+    "max": 0.8,
+    "runs": [
+      0.3,
+      0.3,
+      0.8,
+      0.8,
+      0.8
+    ]
+  },
+  "server_lag_ms": {
+    "median": 210,
+    "max": 381,
+    "source": "sync_logs.lag_ms для этого прогона (от появления сети на телефоне до записи на сервере)"
+  },
+  "notes": "Размер пакета — демо-курс (синтетические PDF и короткое видео). Открытие без интернета — повторный запуск из кэша приложения на том же устройстве."
+}
