@@ -12,6 +12,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
+# логотип для сертификата и протокола (бэкенд не видит папку frontend; копия из frontend/public/brand)
+COPY app/assets/brand/ /app/app/assets/brand/
 
 EXPOSE 8000
 CMD ["sh", "-c", "python -m seed.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]

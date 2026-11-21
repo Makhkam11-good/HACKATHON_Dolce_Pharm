@@ -133,7 +133,8 @@ H_op1, _ = login("op01")
 tasks = c.get("/api/assessments/my-tasks", headers=H_op1).json()
 check(any(t["rater_role"] == "peer" for t in tasks), "op01 has a peer assessment task")
 profiles = c.get("/api/assessments", headers=H_mgr).json()
-closed = next(a for a in profiles if a["status"] == "closed")
+# в seed есть закрытые оценки 180 и 360 — для проверки рекомендаций берём 360
+closed = next(a for a in profiles if a["status"] == "closed" and a["kind"] == "360")
 prof = c.get(f"/api/assessments/{closed['id']}/profile", headers=H_mgr).json()
 check(prof["kind"] == "360" and prof["recommendations"], "closed 360 profile with recommendations")
 
